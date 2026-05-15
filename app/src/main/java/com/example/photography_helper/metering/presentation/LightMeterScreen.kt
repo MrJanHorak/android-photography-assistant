@@ -53,12 +53,72 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.log2
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 private enum class BodyCategoryFilter(val label: String, val category: CameraBodyCategory?) {
     ALL("All bodies", null),
     DIGITAL("Digital", CameraBodyCategory.DIGITAL),
     MANUAL_FILM("Manual / film", CameraBodyCategory.MANUAL_FILM),
+}
+
+private enum class SubjectMotionProfile(
+    val label: String,
+    val description: String,
+    val minimumShutterSeconds: Double,
+) {
+    STILL(
+        label = "Still",
+        description = "Landscapes, architecture, and other mostly static subjects.",
+        minimumShutterSeconds = 1.0 / 30.0,
+    ),
+    PORTRAIT(
+        label = "Portrait",
+        description = "Human micro-movement and natural hand or face motion.",
+        minimumShutterSeconds = 1.0 / 125.0,
+    ),
+    WALKING(
+        label = "Walking",
+        description = "Casual movement, kids walking, or documentary motion.",
+        minimumShutterSeconds = 1.0 / 250.0,
+    ),
+    ACTION(
+        label = "Action",
+        description = "General sports, active children, or movement you want reasonably crisp.",
+        minimumShutterSeconds = 1.0 / 500.0,
+    ),
+    SPORTS(
+        label = "Sports",
+        description = "Fast motion where freezing the subject matters more than low ISO.",
+        minimumShutterSeconds = 1.0 / 1000.0,
+    ),
+}
+
+private enum class StabilizationMode(
+    val label: String,
+    val description: String,
+    val stopsBenefit: Float,
+) {
+    OFF(
+        label = "Off",
+        description = "No stabilization help; use the classic handheld rule of thumb.",
+        stopsBenefit = 0f,
+    ),
+    LENS_ONLY(
+        label = "Lens IS",
+        description = "Use the lens optical stabilizer only.",
+        stopsBenefit = 3f,
+    ),
+    BODY_ONLY(
+        label = "IBIS",
+        description = "Use in-body stabilization only.",
+        stopsBenefit = 3.5f,
+    ),
+    HYBRID(
+        label = "Lens + IBIS",
+        description = "Use coordinated optical and in-body stabilization.",
+        stopsBenefit = 5f,
+    ),
 }
 
 @Composable
@@ -69,6 +129,9 @@ fun LightMeterScreen(
     val meteringState by viewModel.meteringState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+    val gearCatalog = remember(context) { GearCatalogLoader.load(context) }
+    val allBodies = gearCatalog.cameraBodyProfiles
+    val allLenses = gearCatalog.lensProfiles
     val gearPreferences = remember(context) { GearSelectionPreferences(context) }
     val savedGearSelection = remember(gearPreferences) { gearPreferences.load() }
     var hasCameraPermission by rememberSaveable { mutableStateOf(isCameraPermissionGranted(context)) }
@@ -80,11 +143,13 @@ fun LightMeterScreen(
         },
     )
 
-    var bodyId by rememberSaveable { mutableStateOf(savedGearSelection?.bodyId ?: cameraBodyProfiles.first().id) }
-    var lensId by rememberSaveable { mutableStateOf(savedGearSelection?.lensId ?: lensProfiles.first().id) }
+    var bodyId by rememberSaveable { mutableStateOf(savedGearSelection?.bodyId ?: allBodies.first().id) }
+    var lensId by rememberSaveable { mutableStateOf(savedGearSelection?.lensId ?: allLenses.first().id) }
     var selectedFocalLengthMm by rememberSaveable {
-        mutableIntStateOf(savedGearSelection?.selectedFocalLengthMm ?: lensProfiles.first().defaultFocalLengthMm())
+        mutableIntStateOf(savedGearSelection?.selectedFocalLengthMm ?: allLenses.first().defaultFocalLengthMm())
     }
+    var subjectMotionProfileName by rememberSaveable { mutableStateOf(savedGearSelection?.subjectMotionProfileName ?: SubjectMotionProfile.STILL.name) }
+    var stabilizationModeName by rememberSaveable { mutableStateOf(savedGearSelection?.stabilizationModeName ?: StabilizationMode.OFF.name) }
     var allowAdaptedLenses by rememberSaveable { mutableStateOf(savedGearSelection?.allowAdaptedLenses ?: false) }
     var bodyCategoryFilterName by rememberSaveable { mutableStateOf(BodyCategoryFilter.ALL.name) }
     var meteringSourceName by rememberSaveable {
@@ -97,24 +162,31 @@ fun LightMeterScreen(
 
     val bodyCategoryFilter = remember(bodyCategoryFilterName) { BodyCategoryFilter.valueOf(bodyCategoryFilterName) }
     val meteringSource = remember(meteringSourceName) { MeteringSource.valueOf(meteringSourceName) }
+    val subjectMotionProfile = remember(subjectMotionProfileName) { SubjectMotionProfile.valueOf(subjectMotionProfileName) }
     val availableBodies = remember(bodyCategoryFilter) {
         bodyCategoryFilter.category?.let { category ->
-            cameraBodyProfiles.filter { profile -> profile.category == category }
-        } ?: cameraBodyProfiles
+            allBodies.filter { profile -> profile.category == category }
+        } ?: allBodies
     }
     val body = remember(bodyId, availableBodies) {
         availableBodies.firstOrNull { it.id == bodyId }
-            ?: cameraBodyProfiles.firstOrNull { it.id == bodyId }
+            ?: allBodies.firstOrNull { it.id == bodyId }
             ?: availableBodies.first()
     }
     val stopMode = remember(stopModeName) { ExposureStopMode.valueOf(stopModeName) }
-    val compatibleLenses = remember(body, allowAdaptedLenses) { compatibleLensProfiles(body, allowAdaptedLenses) }
+    val compatibleLenses = remember(body, allowAdaptedLenses, allLenses) {
+        compatibleLensProfiles(body, allowAdaptedLenses, allLenses)
+    }
     val lens = remember(lensId, compatibleLenses) {
         compatibleLenses.firstOrNull { it.id == lensId } ?: compatibleLenses.first()
     }
     val focalLengthMm = remember(lens, selectedFocalLengthMm) { lens.clampFocalLength(selectedFocalLengthMm) }
     val apertureOptions = remember(lens, stopMode, focalLengthMm) { lens.filterApertures(stopMode.apertureOptions, focalLengthMm) }
     val isoOptions = remember(body, stopMode) { body.filterIsos(stopMode.isoOptions) }
+    val availableStabilizationModes = remember(body, lens) { availableStabilizationModes(body, lens) }
+    val stabilizationMode = remember(stabilizationModeName, availableStabilizationModes) {
+        availableStabilizationModes.firstOrNull { it.name == stabilizationModeName } ?: availableStabilizationModes.first()
+    }
 
     LaunchedEffect(body.id, compatibleLenses, lensId) {
         if (compatibleLenses.none { it.id == lensId }) {
@@ -135,12 +207,32 @@ fun LightMeterScreen(
         }
     }
 
-    LaunchedEffect(body.id, lens.id, focalLengthMm, allowAdaptedLenses, meteringSource.name, stopMode.name, selectedIso, selectedAperture, calibrationOffset) {
+    LaunchedEffect(availableStabilizationModes, stabilizationMode.name) {
+        if (availableStabilizationModes.none { it.name == stabilizationMode.name }) {
+            stabilizationModeName = availableStabilizationModes.first().name
+        }
+    }
+
+    LaunchedEffect(
+        body.id,
+        lens.id,
+        focalLengthMm,
+        subjectMotionProfile.name,
+        stabilizationMode.name,
+        allowAdaptedLenses,
+        meteringSource.name,
+        stopMode.name,
+        selectedIso,
+        selectedAperture,
+        calibrationOffset,
+    ) {
         gearPreferences.save(
             SavedGearSelection(
                 bodyId = body.id,
                 lensId = lens.id,
                 selectedFocalLengthMm = focalLengthMm,
+                subjectMotionProfileName = subjectMotionProfile.name,
+                stabilizationModeName = stabilizationMode.name,
                 allowAdaptedLenses = allowAdaptedLenses,
                 meteringSourceName = meteringSource.name,
                 stopModeName = stopMode.name,
@@ -228,7 +320,13 @@ fun LightMeterScreen(
     val shutterSpeed = viewModel.calculateShutterSpeed(aperture, iso, meteringState.ev)
     val shutterText = formatSuggestedShutter(shutterSpeed, stopMode, body)
     val evText = meteringState.ev?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--"
-    val handheldMinimumShutterText = "${formatExposureTime(calculateHandheldMinimumShutterSeconds(focalLengthMm, body.cropFactor))} or faster"
+    val handheldMinimumShutterSeconds = calculateHandheldMinimumShutterSeconds(
+        focalLengthMm = focalLengthMm,
+        cropFactor = body.cropFactor,
+        stabilizationStops = stabilizationMode.stopsBenefit,
+    )
+    val motionMinimumShutterSeconds = subjectMotionProfile.minimumShutterSeconds
+    val recommendedMinimumShutterSeconds = minOf(handheldMinimumShutterSeconds, motionMinimumShutterSeconds)
 
     Column(
         modifier = modifier
@@ -295,8 +393,19 @@ fun LightMeterScreen(
             body = body,
             lens = lens,
             focalLengthMm = focalLengthMm,
-            handheldMinimumShutterText = handheldMinimumShutterText,
             onFocalLengthChanged = { selectedFocalLengthMm = it },
+        )
+
+        ShootingAidCard(
+            subjectMotionProfile = subjectMotionProfile,
+            stabilizationMode = stabilizationMode,
+            availableStabilizationModes = availableStabilizationModes,
+            handheldMinimumShutterSeconds = handheldMinimumShutterSeconds,
+            motionMinimumShutterSeconds = motionMinimumShutterSeconds,
+            recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
+            measuredShutterSeconds = shutterSpeed,
+            onSubjectMotionSelected = { subjectMotionProfileName = it.name },
+            onStabilizationModeSelected = { stabilizationModeName = it.name },
         )
 
         StopModeSelector(
@@ -462,7 +571,6 @@ private fun LensSetupCard(
     body: CameraBodyProfile,
     lens: LensProfile,
     focalLengthMm: Int,
-    handheldMinimumShutterText: String,
     onFocalLengthChanged: (Int) -> Unit,
 ) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -506,10 +614,7 @@ private fun LensSetupCard(
                     append(lens.focalLengthRangeLabel)
                     append(" with ")
                     append(lens.widestApertureRangeLabel)
-                    append(" maximum aperture behavior. ")
-                    append("Handheld rule of thumb: ")
-                    append(handheldMinimumShutterText)
-                    append('.')
+                    append(" maximum aperture behavior.")
                     if (body.cropFactor > 1.05f) {
                         append(' ')
                         append("On this body, ")
@@ -530,6 +635,93 @@ private fun LensSetupCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ShootingAidCard(
+    subjectMotionProfile: SubjectMotionProfile,
+    stabilizationMode: StabilizationMode,
+    availableStabilizationModes: List<StabilizationMode>,
+    handheldMinimumShutterSeconds: Double,
+    motionMinimumShutterSeconds: Double,
+    recommendedMinimumShutterSeconds: Double,
+    measuredShutterSeconds: Double?,
+    onSubjectMotionSelected: (SubjectMotionProfile) -> Unit,
+    onStabilizationModeSelected: (StabilizationMode) -> Unit,
+) {
+    val assessment = remember(measuredShutterSeconds, recommendedMinimumShutterSeconds, subjectMotionProfile, stabilizationMode) {
+        buildShootingAidAssessment(
+            measuredShutterSeconds = measuredShutterSeconds,
+            recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
+            subjectMotionProfile = subjectMotionProfile,
+            stabilizationMode = stabilizationMode,
+        )
+    }
+
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Shooting aid",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "Use these quick constraints to judge whether the metered shutter is practical for the way you actually want to shoot.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SelectionDropdownField(
+                label = "Subject motion",
+                selectedText = subjectMotionProfile.label,
+                supportingText = subjectMotionProfile.description,
+                options = SubjectMotionProfile.entries,
+                optionLabel = { profile -> profile.label },
+                onSelected = onSubjectMotionSelected,
+            )
+            SelectionDropdownField(
+                label = "Stabilization",
+                selectedText = stabilizationMode.label,
+                supportingText = stabilizationMode.description,
+                options = availableStabilizationModes,
+                optionLabel = { mode -> mode.label },
+                onSelected = onStabilizationModeSelected,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SummaryMetric(
+                    label = "Handheld minimum",
+                    value = formatExposureTime(handheldMinimumShutterSeconds),
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryMetric(
+                    label = "Motion minimum",
+                    value = formatExposureTime(motionMinimumShutterSeconds),
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryMetric(
+                    label = "Use at least",
+                    value = formatExposureTime(recommendedMinimumShutterSeconds),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = assessment,
+                style = MaterialTheme.typography.bodySmall,
+                color = when {
+                    measuredShutterSeconds == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                    measuredShutterSeconds <= recommendedMinimumShutterSeconds -> MaterialTheme.colorScheme.primary
+                    measuredShutterSeconds <= recommendedMinimumShutterSeconds * 2.0 -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.error
+                },
+            )
         }
     }
 }
@@ -994,9 +1186,57 @@ private fun formatCameraExposureSummary(reading: ReflectiveMeterReading): String
     return "f/${formatDecimal(reading.aperture.toDouble())}  ${formatExposureTime(reading.shutterSeconds)}  ISO ${reading.iso}"
 }
 
-private fun calculateHandheldMinimumShutterSeconds(focalLengthMm: Int, cropFactor: Float): Double {
+private fun calculateHandheldMinimumShutterSeconds(
+    focalLengthMm: Int,
+    cropFactor: Float,
+    stabilizationStops: Float,
+): Double {
     val effectiveFocalLength = (focalLengthMm.toFloat() * cropFactor).coerceAtLeast(1.0f)
-    return 1.0 / effectiveFocalLength
+    val baseRule = 1.0 / effectiveFocalLength
+    val stabilizationBenefit = 2.0.pow(stabilizationStops.toDouble())
+    return baseRule / stabilizationBenefit
+}
+
+private fun availableStabilizationModes(
+    body: CameraBodyProfile,
+    lens: LensProfile,
+): List<StabilizationMode> {
+    return buildList {
+        add(StabilizationMode.OFF)
+        if (lens.hasOpticalStabilization) {
+            add(StabilizationMode.LENS_ONLY)
+        }
+        if (body.hasInBodyStabilization) {
+            add(StabilizationMode.BODY_ONLY)
+        }
+        if (lens.hasOpticalStabilization && body.hasInBodyStabilization) {
+            add(StabilizationMode.HYBRID)
+        }
+    }
+}
+
+private fun buildShootingAidAssessment(
+    measuredShutterSeconds: Double?,
+    recommendedMinimumShutterSeconds: Double,
+    subjectMotionProfile: SubjectMotionProfile,
+    stabilizationMode: StabilizationMode,
+): String {
+    val measuredSeconds = measuredShutterSeconds ?: return "Awaiting a metered shutter so the shooting aid can compare it to your handheld and subject-motion limits."
+    val deltaStops = log2(measuredSeconds / recommendedMinimumShutterSeconds)
+
+    return when {
+        deltaStops <= 0.0 -> {
+            "The metered shutter is fast enough for ${subjectMotionProfile.label.lowercase(Locale.getDefault())} shooting with ${stabilizationMode.label.lowercase(Locale.getDefault())}."
+        }
+
+        deltaStops <= 1.0 -> {
+            "The metered shutter is borderline. About one stop faster would give more margin for ${subjectMotionProfile.label.lowercase(Locale.getDefault())} subjects."
+        }
+
+        else -> {
+            "The metered shutter is too slow for this setup. Raise ISO, open the aperture, add support, or reduce subject motion."
+        }
+    }
 }
 
 private fun formatExposureTime(seconds: Double): String {

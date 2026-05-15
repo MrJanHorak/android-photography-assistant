@@ -64,6 +64,7 @@ internal data class CameraBodyProfile(
     val nativeMount: LensMount,
     val nativeCompatibleMounts: Set<LensMount> = setOf(nativeMount),
     val adaptedCompatibleMounts: Set<LensMount> = emptySet(),
+    val hasInBodyStabilization: Boolean = false,
     val minIso: Int,
     val maxIso: Int,
     val fastestShutterSeconds: Double,
@@ -123,6 +124,7 @@ internal data class LensProfile(
     val widestApertureAtWideEnd: Float,
     val widestApertureAtTeleEnd: Float = widestApertureAtWideEnd,
     val narrowestAperture: Float,
+    val hasOpticalStabilization: Boolean = false,
 ) {
     val isZoom: Boolean
         get() = minFocalLengthMm != maxFocalLengthMm
@@ -179,11 +181,12 @@ internal data class LensProfile(
 internal fun compatibleLensProfiles(
     body: CameraBodyProfile,
     allowAdaptedLenses: Boolean,
+    allLensProfiles: List<LensProfile> = lensProfiles,
 ): List<LensProfile> {
-    return lensProfiles.filter { lens -> body.supportsLens(lens, allowAdaptedLenses) }
+    return allLensProfiles.filter { lens -> body.supportsLens(lens, allowAdaptedLenses) }
         .ifEmpty {
-            lensProfiles.filter { lens -> lens.mount == LensMount.GENERIC }
-                .ifEmpty { lensProfiles.take(1) }
+            allLensProfiles.filter { lens -> lens.mount == LensMount.GENERIC }
+                .ifEmpty { allLensProfiles.take(1) }
         }
 }
 
@@ -196,6 +199,7 @@ internal val cameraBodyProfiles = listOf(
         cropFactor = 1.0f,
         nativeMount = LensMount.GENERIC,
         nativeCompatibleMounts = setOf(LensMount.GENERIC),
+        hasInBodyStabilization = false,
         minIso = 100,
         maxIso = 6400,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -211,6 +215,7 @@ internal val cameraBodyProfiles = listOf(
         nativeMount = LensMount.CANON_RF,
         nativeCompatibleMounts = setOf(LensMount.CANON_RF),
         adaptedCompatibleMounts = setOf(LensMount.CANON_EF),
+        hasInBodyStabilization = true,
         minIso = 100,
         maxIso = 102400,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -226,6 +231,7 @@ internal val cameraBodyProfiles = listOf(
         nativeMount = LensMount.CANON_RF,
         nativeCompatibleMounts = setOf(LensMount.CANON_RF),
         adaptedCompatibleMounts = setOf(LensMount.CANON_EF),
+        hasInBodyStabilization = false,
         minIso = 100,
         maxIso = 32000,
         fastestShutterSeconds = 1.0 / 4000.0,
@@ -240,6 +246,7 @@ internal val cameraBodyProfiles = listOf(
         cropFactor = 1.0f,
         nativeMount = LensMount.SONY_FE,
         nativeCompatibleMounts = setOf(LensMount.SONY_FE, LensMount.SONY_E),
+        hasInBodyStabilization = true,
         minIso = 100,
         maxIso = 51200,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -255,6 +262,7 @@ internal val cameraBodyProfiles = listOf(
         nativeMount = LensMount.NIKON_Z,
         nativeCompatibleMounts = setOf(LensMount.NIKON_Z),
         adaptedCompatibleMounts = setOf(LensMount.NIKON_F),
+        hasInBodyStabilization = true,
         minIso = 100,
         maxIso = 51200,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -269,6 +277,7 @@ internal val cameraBodyProfiles = listOf(
         cropFactor = 1.0f,
         nativeMount = LensMount.NIKON_F,
         nativeCompatibleMounts = setOf(LensMount.NIKON_F),
+        hasInBodyStabilization = false,
         minIso = 25,
         maxIso = 3200,
         fastestShutterSeconds = 1.0 / 4000.0,
@@ -284,6 +293,7 @@ internal val cameraBodyProfiles = listOf(
         cropFactor = 1.0f,
         nativeMount = LensMount.CANON_FD,
         nativeCompatibleMounts = setOf(LensMount.CANON_FD),
+        hasInBodyStabilization = false,
         minIso = 25,
         maxIso = 3200,
         fastestShutterSeconds = 1.0 / 1000.0,
@@ -299,6 +309,7 @@ internal val cameraBodyProfiles = listOf(
         cropFactor = 1.0f,
         nativeMount = LensMount.PENTAX_K,
         nativeCompatibleMounts = setOf(LensMount.PENTAX_K),
+        hasInBodyStabilization = false,
         minIso = 20,
         maxIso = 3200,
         fastestShutterSeconds = 1.0 / 1000.0,
@@ -319,6 +330,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 2.8f,
         widestApertureAtTeleEnd = 2.8f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "canon_rf_24_70_28",
@@ -330,6 +342,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 2.8f,
         widestApertureAtTeleEnd = 2.8f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = true,
     ),
     LensProfile(
         id = "canon_rf_24_105_4",
@@ -341,6 +354,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 4.0f,
         widestApertureAtTeleEnd = 4.0f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = true,
     ),
     LensProfile(
         id = "canon_rf_24_240_4_63",
@@ -352,6 +366,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 4.0f,
         widestApertureAtTeleEnd = 6.3f,
         narrowestAperture = 40.0f,
+        hasOpticalStabilization = true,
     ),
     LensProfile(
         id = "canon_ef_50_14",
@@ -361,6 +376,7 @@ internal val lensProfiles = listOf(
         minFocalLengthMm = 50,
         widestApertureAtWideEnd = 1.4f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "nikon_z_24_70_4",
@@ -372,6 +388,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 4.0f,
         widestApertureAtTeleEnd = 4.0f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "nikon_z_24_200_4_63",
@@ -383,6 +400,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 4.0f,
         widestApertureAtTeleEnd = 6.3f,
         narrowestAperture = 32.0f,
+        hasOpticalStabilization = true,
     ),
     LensProfile(
         id = "nikon_f_50_18g",
@@ -392,6 +410,7 @@ internal val lensProfiles = listOf(
         minFocalLengthMm = 50,
         widestApertureAtWideEnd = 1.8f,
         narrowestAperture = 16.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "nikon_ai_s_50_18",
@@ -401,6 +420,7 @@ internal val lensProfiles = listOf(
         minFocalLengthMm = 50,
         widestApertureAtWideEnd = 1.8f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "canon_fd_50_14",
@@ -410,6 +430,7 @@ internal val lensProfiles = listOf(
         minFocalLengthMm = 50,
         widestApertureAtWideEnd = 1.4f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "pentax_k_50_17",
@@ -419,6 +440,7 @@ internal val lensProfiles = listOf(
         minFocalLengthMm = 50,
         widestApertureAtWideEnd = 1.7f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "sony_fe_24_70_28_gm2",
@@ -430,6 +452,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 2.8f,
         widestApertureAtTeleEnd = 2.8f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
     LensProfile(
         id = "sony_fe_24_240_35_63",
@@ -441,6 +464,7 @@ internal val lensProfiles = listOf(
         widestApertureAtWideEnd = 3.5f,
         widestApertureAtTeleEnd = 6.3f,
         narrowestAperture = 40.0f,
+        hasOpticalStabilization = true,
     ),
     LensProfile(
         id = "sony_fe_35_18",
@@ -450,6 +474,7 @@ internal val lensProfiles = listOf(
         minFocalLengthMm = 35,
         widestApertureAtWideEnd = 1.8f,
         narrowestAperture = 22.0f,
+        hasOpticalStabilization = false,
     ),
 )
 
