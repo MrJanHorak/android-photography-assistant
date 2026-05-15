@@ -1,0 +1,342 @@
+package com.example.photography_helper.metering.presentation
+
+import kotlin.math.abs
+
+internal data class ExposureOption<T : Number>(
+    val value: T,
+    val label: String,
+)
+
+internal data class ShutterOption(
+    val seconds: Double,
+    val label: String,
+)
+
+internal enum class ExposureStopMode(
+    val label: String,
+    val apertureDescription: String,
+    val isoDescription: String,
+    val apertureOptions: List<ExposureOption<Float>>,
+    val isoOptions: List<ExposureOption<Int>>,
+    val shutterOptions: List<ShutterOption>,
+) {
+    FULL(
+        label = "Full stop",
+        apertureDescription = "Common full-stop settings for quick photographic adjustments.",
+        isoDescription = "Common full-stop ISO values used by many cameras.",
+        apertureOptions = FULL_STOP_APERTURES,
+        isoOptions = FULL_STOP_ISOS,
+        shutterOptions = FULL_STOP_SHUTTERS,
+    ),
+    THIRD(
+        label = "1/3 stop",
+        apertureDescription = "One-third-stop settings that better match most modern camera dials.",
+        isoDescription = "One-third-stop ISO values commonly exposed in digital camera menus.",
+        apertureOptions = THIRD_STOP_APERTURES,
+        isoOptions = THIRD_STOP_ISOS,
+        shutterOptions = THIRD_STOP_SHUTTERS,
+    )
+}
+
+internal data class CameraBodyProfile(
+    val id: String,
+    val label: String,
+    val description: String,
+    val minIso: Int,
+    val maxIso: Int,
+    val fastestShutterSeconds: Double,
+    val longestStandardShutterSeconds: Double,
+    val supportsBulb: Boolean = true,
+) {
+    fun filterIsos(options: List<ExposureOption<Int>>): List<ExposureOption<Int>> {
+        return options.filter { option -> option.value in minIso..maxIso }
+            .ifEmpty {
+                listOf(options.minByOrNull { option -> abs(option.value - minIso) } ?: options.first())
+            }
+    }
+
+    fun filterShutters(options: List<ShutterOption>): List<ShutterOption> {
+        return options.filter { option -> option.seconds in fastestShutterSeconds..longestStandardShutterSeconds }
+            .ifEmpty { options }
+    }
+}
+
+internal data class LensProfile(
+    val id: String,
+    val label: String,
+    val description: String,
+    val widestAperture: Float,
+    val narrowestAperture: Float,
+) {
+    fun filterApertures(options: List<ExposureOption<Float>>): List<ExposureOption<Float>> {
+        return options.filter { option -> option.value in widestAperture..narrowestAperture }
+            .ifEmpty {
+                listOf(options.minByOrNull { option -> abs(option.value - widestAperture) } ?: options.first())
+            }
+    }
+}
+
+internal val cameraBodyProfiles = listOf(
+    CameraBodyProfile(
+        id = "generic_digital",
+        label = "Generic digital body",
+        description = "Fallback preset with a common 30 s to 1/8000 s shutter range and ISO 100 to 6400.",
+        minIso = 100,
+        maxIso = 6400,
+        fastestShutterSeconds = 1.0 / 8000.0,
+        longestStandardShutterSeconds = 30.0,
+    ),
+    CameraBodyProfile(
+        id = "canon_eos_r6_mk2",
+        label = "Canon EOS R6 Mark II",
+        description = "Full-frame mirrorless preset with ISO 100 to 102400 and a standard 30 s to 1/8000 s shutter range.",
+        minIso = 100,
+        maxIso = 102400,
+        fastestShutterSeconds = 1.0 / 8000.0,
+        longestStandardShutterSeconds = 30.0,
+    ),
+    CameraBodyProfile(
+        id = "canon_eos_r10",
+        label = "Canon EOS R10",
+        description = "APS-C mirrorless preset with ISO 100 to 32000 and a conservative 30 s to 1/4000 s shutter range.",
+        minIso = 100,
+        maxIso = 32000,
+        fastestShutterSeconds = 1.0 / 4000.0,
+        longestStandardShutterSeconds = 30.0,
+    ),
+    CameraBodyProfile(
+        id = "sony_a7_iv",
+        label = "Sony a7 IV",
+        description = "Full-frame mirrorless preset with ISO 100 to 51200 and a standard 30 s to 1/8000 s shutter range.",
+        minIso = 100,
+        maxIso = 51200,
+        fastestShutterSeconds = 1.0 / 8000.0,
+        longestStandardShutterSeconds = 30.0,
+    ),
+    CameraBodyProfile(
+        id = "nikon_z6_ii",
+        label = "Nikon Z6 II",
+        description = "Full-frame mirrorless preset with ISO 100 to 51200 and a standard 30 s to 1/8000 s shutter range.",
+        minIso = 100,
+        maxIso = 51200,
+        fastestShutterSeconds = 1.0 / 8000.0,
+        longestStandardShutterSeconds = 30.0,
+    ),
+)
+
+internal val lensProfiles = listOf(
+    LensProfile(
+        id = "generic_24_70_28",
+        label = "Generic 24-70mm f/2.8",
+        description = "Generic constant-aperture standard zoom preset.",
+        widestAperture = 2.8f,
+        narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "canon_ef_50_14",
+        label = "Canon EF 50mm f/1.4 USM",
+        description = "Fast normal prime preset with f/1.4 to f/22 coverage.",
+        widestAperture = 1.4f,
+        narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "canon_rf_24_70_28",
+        label = "Canon RF 24-70mm F2.8L IS USM",
+        description = "Constant-aperture professional zoom preset.",
+        widestAperture = 2.8f,
+        narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "canon_rf_24_105_4",
+        label = "Canon RF 24-105mm F4L IS USM",
+        description = "Constant-aperture travel zoom preset.",
+        widestAperture = 4.0f,
+        narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "nikon_z_24_70_4",
+        label = "Nikon Z 24-70mm f/4 S",
+        description = "Constant-aperture standard zoom preset.",
+        widestAperture = 4.0f,
+        narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "sigma_35_14_art",
+        label = "Sigma 35mm F1.4 DG HSM Art",
+        description = "Fast wide-normal prime preset with f/1.4 to f/16 coverage.",
+        widestAperture = 1.4f,
+        narrowestAperture = 16.0f,
+    ),
+)
+
+private val FULL_STOP_APERTURES = listOf(
+    ExposureOption(1.4f, "f/1.4"),
+    ExposureOption(2.0f, "f/2"),
+    ExposureOption(2.8f, "f/2.8"),
+    ExposureOption(4.0f, "f/4"),
+    ExposureOption(5.6f, "f/5.6"),
+    ExposureOption(8.0f, "f/8"),
+    ExposureOption(11.0f, "f/11"),
+    ExposureOption(16.0f, "f/16"),
+    ExposureOption(22.0f, "f/22"),
+)
+
+private val THIRD_STOP_APERTURES = listOf(
+    ExposureOption(1.4f, "f/1.4"),
+    ExposureOption(1.6f, "f/1.6"),
+    ExposureOption(1.8f, "f/1.8"),
+    ExposureOption(2.0f, "f/2"),
+    ExposureOption(2.2f, "f/2.2"),
+    ExposureOption(2.5f, "f/2.5"),
+    ExposureOption(2.8f, "f/2.8"),
+    ExposureOption(3.2f, "f/3.2"),
+    ExposureOption(3.5f, "f/3.5"),
+    ExposureOption(4.0f, "f/4"),
+    ExposureOption(4.5f, "f/4.5"),
+    ExposureOption(5.0f, "f/5"),
+    ExposureOption(5.6f, "f/5.6"),
+    ExposureOption(6.3f, "f/6.3"),
+    ExposureOption(7.1f, "f/7.1"),
+    ExposureOption(8.0f, "f/8"),
+    ExposureOption(9.0f, "f/9"),
+    ExposureOption(10.0f, "f/10"),
+    ExposureOption(11.0f, "f/11"),
+    ExposureOption(13.0f, "f/13"),
+    ExposureOption(14.0f, "f/14"),
+    ExposureOption(16.0f, "f/16"),
+    ExposureOption(18.0f, "f/18"),
+    ExposureOption(20.0f, "f/20"),
+    ExposureOption(22.0f, "f/22"),
+)
+
+private val FULL_STOP_ISOS = listOf(
+    ExposureOption(50, "ISO 50"),
+    ExposureOption(100, "ISO 100"),
+    ExposureOption(200, "ISO 200"),
+    ExposureOption(400, "ISO 400"),
+    ExposureOption(800, "ISO 800"),
+    ExposureOption(1600, "ISO 1600"),
+    ExposureOption(3200, "ISO 3200"),
+    ExposureOption(6400, "ISO 6400"),
+    ExposureOption(12800, "ISO 12800"),
+    ExposureOption(25600, "ISO 25600"),
+    ExposureOption(51200, "ISO 51200"),
+    ExposureOption(102400, "ISO 102400"),
+)
+
+private val THIRD_STOP_ISOS = listOf(
+    ExposureOption(50, "ISO 50"),
+    ExposureOption(64, "ISO 64"),
+    ExposureOption(80, "ISO 80"),
+    ExposureOption(100, "ISO 100"),
+    ExposureOption(125, "ISO 125"),
+    ExposureOption(160, "ISO 160"),
+    ExposureOption(200, "ISO 200"),
+    ExposureOption(250, "ISO 250"),
+    ExposureOption(320, "ISO 320"),
+    ExposureOption(400, "ISO 400"),
+    ExposureOption(500, "ISO 500"),
+    ExposureOption(640, "ISO 640"),
+    ExposureOption(800, "ISO 800"),
+    ExposureOption(1000, "ISO 1000"),
+    ExposureOption(1250, "ISO 1250"),
+    ExposureOption(1600, "ISO 1600"),
+    ExposureOption(2000, "ISO 2000"),
+    ExposureOption(2500, "ISO 2500"),
+    ExposureOption(3200, "ISO 3200"),
+    ExposureOption(4000, "ISO 4000"),
+    ExposureOption(5000, "ISO 5000"),
+    ExposureOption(6400, "ISO 6400"),
+    ExposureOption(8000, "ISO 8000"),
+    ExposureOption(10000, "ISO 10000"),
+    ExposureOption(12800, "ISO 12800"),
+    ExposureOption(16000, "ISO 16000"),
+    ExposureOption(20000, "ISO 20000"),
+    ExposureOption(25600, "ISO 25600"),
+    ExposureOption(32000, "ISO 32000"),
+    ExposureOption(40000, "ISO 40000"),
+    ExposureOption(51200, "ISO 51200"),
+    ExposureOption(64000, "ISO 64000"),
+    ExposureOption(80000, "ISO 80000"),
+    ExposureOption(102400, "ISO 102400"),
+)
+
+private val FULL_STOP_SHUTTERS = listOf(
+    ShutterOption(30.0, "30 s"),
+    ShutterOption(15.0, "15 s"),
+    ShutterOption(8.0, "8 s"),
+    ShutterOption(4.0, "4 s"),
+    ShutterOption(2.0, "2 s"),
+    ShutterOption(1.0, "1 s"),
+    ShutterOption(0.5, "1/2 s"),
+    ShutterOption(0.25, "1/4 s"),
+    ShutterOption(0.125, "1/8 s"),
+    ShutterOption(1.0 / 15.0, "1/15 s"),
+    ShutterOption(1.0 / 30.0, "1/30 s"),
+    ShutterOption(1.0 / 60.0, "1/60 s"),
+    ShutterOption(1.0 / 125.0, "1/125 s"),
+    ShutterOption(1.0 / 250.0, "1/250 s"),
+    ShutterOption(1.0 / 500.0, "1/500 s"),
+    ShutterOption(1.0 / 1000.0, "1/1000 s"),
+    ShutterOption(1.0 / 2000.0, "1/2000 s"),
+    ShutterOption(1.0 / 4000.0, "1/4000 s"),
+    ShutterOption(1.0 / 8000.0, "1/8000 s"),
+)
+
+private val THIRD_STOP_SHUTTERS = listOf(
+    ShutterOption(30.0, "30 s"),
+    ShutterOption(25.0, "25 s"),
+    ShutterOption(20.0, "20 s"),
+    ShutterOption(15.0, "15 s"),
+    ShutterOption(13.0, "13 s"),
+    ShutterOption(10.0, "10 s"),
+    ShutterOption(8.0, "8 s"),
+    ShutterOption(6.0, "6 s"),
+    ShutterOption(5.0, "5 s"),
+    ShutterOption(4.0, "4 s"),
+    ShutterOption(3.2, "3.2 s"),
+    ShutterOption(2.5, "2.5 s"),
+    ShutterOption(2.0, "2 s"),
+    ShutterOption(1.6, "1.6 s"),
+    ShutterOption(1.3, "1.3 s"),
+    ShutterOption(1.0, "1 s"),
+    ShutterOption(0.8, "0.8 s"),
+    ShutterOption(0.6, "0.6 s"),
+    ShutterOption(0.5, "1/2 s"),
+    ShutterOption(0.4, "0.4 s"),
+    ShutterOption(1.0 / 3.0, "1/3 s"),
+    ShutterOption(0.25, "1/4 s"),
+    ShutterOption(0.2, "1/5 s"),
+    ShutterOption(1.0 / 6.0, "1/6 s"),
+    ShutterOption(0.125, "1/8 s"),
+    ShutterOption(0.1, "1/10 s"),
+    ShutterOption(1.0 / 13.0, "1/13 s"),
+    ShutterOption(1.0 / 15.0, "1/15 s"),
+    ShutterOption(0.05, "1/20 s"),
+    ShutterOption(0.04, "1/25 s"),
+    ShutterOption(1.0 / 30.0, "1/30 s"),
+    ShutterOption(0.025, "1/40 s"),
+    ShutterOption(0.02, "1/50 s"),
+    ShutterOption(1.0 / 60.0, "1/60 s"),
+    ShutterOption(1.0 / 80.0, "1/80 s"),
+    ShutterOption(0.01, "1/100 s"),
+    ShutterOption(1.0 / 125.0, "1/125 s"),
+    ShutterOption(1.0 / 160.0, "1/160 s"),
+    ShutterOption(0.005, "1/200 s"),
+    ShutterOption(1.0 / 250.0, "1/250 s"),
+    ShutterOption(1.0 / 320.0, "1/320 s"),
+    ShutterOption(0.0025, "1/400 s"),
+    ShutterOption(1.0 / 500.0, "1/500 s"),
+    ShutterOption(1.0 / 640.0, "1/640 s"),
+    ShutterOption(0.00125, "1/800 s"),
+    ShutterOption(1.0 / 1000.0, "1/1000 s"),
+    ShutterOption(1.0 / 1250.0, "1/1250 s"),
+    ShutterOption(1.0 / 1600.0, "1/1600 s"),
+    ShutterOption(1.0 / 2000.0, "1/2000 s"),
+    ShutterOption(1.0 / 2500.0, "1/2500 s"),
+    ShutterOption(1.0 / 3200.0, "1/3200 s"),
+    ShutterOption(1.0 / 4000.0, "1/4000 s"),
+    ShutterOption(1.0 / 5000.0, "1/5000 s"),
+    ShutterOption(1.0 / 6400.0, "1/6400 s"),
+    ShutterOption(1.0 / 8000.0, "1/8000 s"),
+)
