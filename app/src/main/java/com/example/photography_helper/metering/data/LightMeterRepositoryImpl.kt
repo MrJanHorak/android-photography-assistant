@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.example.photography_helper.metering.domain.LightMeterRepository
+import com.example.photography_helper.metering.domain.LightMeterState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,36 +24,63 @@ class LightMeterRepositoryImpl @Inject constructor(
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
 
-    private val _evStream = MutableStateFlow(0f)
+    private val _meteringState = MutableStateFlow(
+        LightMeterState(
+            sensorAvailable = lightSensor != null,
+            isMetering = false,
+        )
+    )
     private var calibrationOffset = 0f
+    private var lastLux = 0.0001f
 
     override fun startMetering() {
-        lightSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        val sensor = lightSensor
+        if (sensor == null) {
+            _meteringState.value = _meteringState.value.copy(
+                sensorAvailable = false,
+                isMetering = false,
+            )
+            return
         }
+
+        val isRegistered = sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
+        _meteringState.value = _meteringState.value.copy(
+            sensorAvailable = true,
+            isMetering = isRegistered,
+        )
     }
 
     override fun stopMetering() {
         sensorManager.unregisterListener(this)
+        _meteringState.value = _meteringState.value.copy(isMetering = false)
     }
 
     override fun setCalibrationOffset(offsetEv: Float) {
-        // Clamp to +/- 3.0 EV
         calibrationOffset = offsetEv.coerceIn(-3.0f, 3.0f)
+        val currentState = _meteringState.value
+        _meteringState.value = currentState.copy(
+            calibrationOffsetEv = calibrationOffset,
+            ev = currentState.lux?.let(::calculateEv),
+        )
     }
 
-    override fun getEvStream(): Flow<Float> = _evStream.asStateFlow()
+    override fun getMeteringStateStream(): Flow<LightMeterState> = _meteringState.asStateFlow()
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
-            val lux = max(event.values[0], 0.0001f) // Prevent log(0)
-            // EV = log2(lux / 2.5)
-            val baseEv = log2(lux / 2.5f)
-            _evStream.value = baseEv + calibrationOffset
+            lastLux = max(event.values[0], 0.0001f)
+            _meteringState.value = _meteringState.value.copy(
+                sensorAvailable = true,
+                isMetering = true,
+                lux = lastLux,
+                ev = calculateEv(lastLux),
+            )
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Not needed for light sensor EV calculation
+        // No-op for this meter.
     }
+
+    private fun calculateEv(lux: Float): Float = log2(lux / 2.5f) + calibrationOffset
 }
