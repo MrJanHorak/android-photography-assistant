@@ -82,6 +82,9 @@ fun LightMeterScreen(
 
     var bodyId by rememberSaveable { mutableStateOf(savedGearSelection?.bodyId ?: cameraBodyProfiles.first().id) }
     var lensId by rememberSaveable { mutableStateOf(savedGearSelection?.lensId ?: lensProfiles.first().id) }
+    var selectedFocalLengthMm by rememberSaveable {
+        mutableIntStateOf(savedGearSelection?.selectedFocalLengthMm ?: lensProfiles.first().defaultFocalLengthMm())
+    }
     var allowAdaptedLenses by rememberSaveable { mutableStateOf(savedGearSelection?.allowAdaptedLenses ?: false) }
     var bodyCategoryFilterName by rememberSaveable { mutableStateOf(BodyCategoryFilter.ALL.name) }
     var meteringSourceName by rememberSaveable {
@@ -109,12 +112,20 @@ fun LightMeterScreen(
     val lens = remember(lensId, compatibleLenses) {
         compatibleLenses.firstOrNull { it.id == lensId } ?: compatibleLenses.first()
     }
-    val apertureOptions = remember(lens, stopMode) { lens.filterApertures(stopMode.apertureOptions) }
+    val focalLengthMm = remember(lens, selectedFocalLengthMm) { lens.clampFocalLength(selectedFocalLengthMm) }
+    val apertureOptions = remember(lens, stopMode, focalLengthMm) { lens.filterApertures(stopMode.apertureOptions, focalLengthMm) }
     val isoOptions = remember(body, stopMode) { body.filterIsos(stopMode.isoOptions) }
 
     LaunchedEffect(body.id, compatibleLenses, lensId) {
         if (compatibleLenses.none { it.id == lensId }) {
             lensId = compatibleLenses.first().id
+        }
+    }
+
+    LaunchedEffect(lens.id, selectedFocalLengthMm) {
+        val clampedFocalLength = lens.clampFocalLength(selectedFocalLengthMm)
+        if (selectedFocalLengthMm != clampedFocalLength) {
+            selectedFocalLengthMm = clampedFocalLength
         }
     }
 
@@ -124,11 +135,12 @@ fun LightMeterScreen(
         }
     }
 
-    LaunchedEffect(body.id, lens.id, allowAdaptedLenses, stopMode.name, selectedIso, selectedAperture, calibrationOffset) {
+    LaunchedEffect(body.id, lens.id, focalLengthMm, allowAdaptedLenses, meteringSource.name, stopMode.name, selectedIso, selectedAperture, calibrationOffset) {
         gearPreferences.save(
             SavedGearSelection(
                 bodyId = body.id,
                 lensId = lens.id,
+                selectedFocalLengthMm = focalLengthMm,
                 allowAdaptedLenses = allowAdaptedLenses,
                 meteringSourceName = meteringSource.name,
                 stopModeName = stopMode.name,
@@ -216,6 +228,7 @@ fun LightMeterScreen(
     val shutterSpeed = viewModel.calculateShutterSpeed(aperture, iso, meteringState.ev)
     val shutterText = formatSuggestedShutter(shutterSpeed, stopMode, body)
     val evText = meteringState.ev?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--"
+    val handheldMinimumShutterText = "${formatExposureTime(calculateHandheldMinimumShutterSeconds(focalLengthMm, body.cropFactor))} or faster"
 
     Column(
         modifier = modifier
@@ -278,6 +291,14 @@ fun LightMeterScreen(
             onAllowAdaptedLensesChanged = { allowAdaptedLenses = it },
         )
 
+        LensSetupCard(
+            body = body,
+            lens = lens,
+            focalLengthMm = focalLengthMm,
+            handheldMinimumShutterText = handheldMinimumShutterText,
+            onFocalLengthChanged = { selectedFocalLengthMm = it },
+        )
+
         StopModeSelector(
             selectedMode = stopMode,
             onModeSelected = { stopModeName = it.name }
@@ -286,7 +307,7 @@ fun LightMeterScreen(
         ExposureStepControl(
             label = "Aperture",
             value = apertureOptions[apertureIndex].label,
-            supportingText = "Available on ${lens.label}. ${stopMode.apertureDescription}",
+            supportingText = "At ${lens.focalLengthLabel(focalLengthMm)}, this lens opens to f/${formatDecimal(lens.effectiveWidestAperture(focalLengthMm).toDouble())}. ${stopMode.apertureDescription}",
             previousLabel = "Wider",
             nextLabel = "Narrower",
             canGoPrevious = apertureIndex > 0,
@@ -432,6 +453,83 @@ private fun MeterSummaryCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun LensSetupCard(
+    body: CameraBodyProfile,
+    lens: LensProfile,
+    focalLengthMm: Int,
+    handheldMinimumShutterText: String,
+    onFocalLengthChanged: (Int) -> Unit,
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Lens setup",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = if (lens.isZoom) {
+                    "Set the zoom position for the shot. The widest usable aperture and handheld guidance update with focal length."
+                } else {
+                    "This lens has a fixed focal length, so the framing and widest aperture stay constant."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SummaryMetric(
+                    label = "Focal length",
+                    value = lens.focalLengthLabel(focalLengthMm),
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryMetric(
+                    label = "Widest aperture now",
+                    value = "f/${formatDecimal(lens.effectiveWidestAperture(focalLengthMm).toDouble())}",
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = buildString {
+                    append("Lens range: ")
+                    append(lens.focalLengthRangeLabel)
+                    append(" with ")
+                    append(lens.widestApertureRangeLabel)
+                    append(" maximum aperture behavior. ")
+                    append("Handheld rule of thumb: ")
+                    append(handheldMinimumShutterText)
+                    append('.')
+                    if (body.cropFactor > 1.05f) {
+                        append(' ')
+                        append("On this body, ")
+                        append(lens.focalLengthLabel(focalLengthMm))
+                        append(" frames like about ")
+                        append(formatDecimal((focalLengthMm * body.cropFactor).toDouble()))
+                        append("mm on full frame.")
+                    }
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (lens.isZoom) {
+                Slider(
+                    value = focalLengthMm.toFloat(),
+                    onValueChange = { onFocalLengthChanged(it.roundToInt()) },
+                    valueRange = lens.minFocalLengthMm.toFloat()..lens.maxFocalLengthMm.toFloat(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
@@ -894,6 +992,11 @@ private fun formatDuration(seconds: Double): String {
 
 private fun formatCameraExposureSummary(reading: ReflectiveMeterReading): String {
     return "f/${formatDecimal(reading.aperture.toDouble())}  ${formatExposureTime(reading.shutterSeconds)}  ISO ${reading.iso}"
+}
+
+private fun calculateHandheldMinimumShutterSeconds(focalLengthMm: Int, cropFactor: Float): Double {
+    val effectiveFocalLength = (focalLengthMm.toFloat() * cropFactor).coerceAtLeast(1.0f)
+    return 1.0 / effectiveFocalLength
 }
 
 private fun formatExposureTime(seconds: Double): String {

@@ -60,6 +60,7 @@ internal data class CameraBodyProfile(
     val label: String,
     val description: String,
     val category: CameraBodyCategory,
+    val cropFactor: Float = 1.0f,
     val nativeMount: LensMount,
     val nativeCompatibleMounts: Set<LensMount> = setOf(nativeMount),
     val adaptedCompatibleMounts: Set<LensMount> = emptySet(),
@@ -117,9 +118,29 @@ internal data class LensProfile(
     val label: String,
     val description: String,
     val mount: LensMount,
-    val widestAperture: Float,
+    val minFocalLengthMm: Int,
+    val maxFocalLengthMm: Int = minFocalLengthMm,
+    val widestApertureAtWideEnd: Float,
+    val widestApertureAtTeleEnd: Float = widestApertureAtWideEnd,
     val narrowestAperture: Float,
 ) {
+    val isZoom: Boolean
+        get() = minFocalLengthMm != maxFocalLengthMm
+
+    val focalLengthRangeLabel: String
+        get() = if (isZoom) {
+            "${minFocalLengthMm}-${maxFocalLengthMm}mm"
+        } else {
+            "${minFocalLengthMm}mm"
+        }
+
+    val widestApertureRangeLabel: String
+        get() = if (abs(widestApertureAtWideEnd - widestApertureAtTeleEnd) < 0.05f) {
+            "f/${formatCatalogDecimal(widestApertureAtWideEnd.toDouble())}"
+        } else {
+            "f/${formatCatalogDecimal(widestApertureAtWideEnd.toDouble())}-${formatCatalogDecimal(widestApertureAtTeleEnd.toDouble())}"
+        }
+
     val mountSummary: String
         get() = if (mount == LensMount.GENERIC) {
             "Works with any body profile"
@@ -127,10 +148,30 @@ internal data class LensProfile(
             "Mount: ${mount.label}"
         }
 
-    fun filterApertures(options: List<ExposureOption<Float>>): List<ExposureOption<Float>> {
-        return options.filter { option -> option.value in widestAperture..narrowestAperture }
+    fun defaultFocalLengthMm(): Int = minFocalLengthMm
+
+    fun clampFocalLength(focalLengthMm: Int): Int = focalLengthMm.coerceIn(minFocalLengthMm, maxFocalLengthMm)
+
+    fun focalLengthLabel(focalLengthMm: Int): String = "${clampFocalLength(focalLengthMm)}mm"
+
+    fun effectiveWidestAperture(focalLengthMm: Int): Float {
+        val clampedFocalLength = clampFocalLength(focalLengthMm)
+        if (!isZoom || abs(widestApertureAtWideEnd - widestApertureAtTeleEnd) < 0.05f) {
+            return widestApertureAtWideEnd
+        }
+
+        val ratio = (clampedFocalLength - minFocalLengthMm).toFloat() / (maxFocalLengthMm - minFocalLengthMm).toFloat()
+        return widestApertureAtWideEnd + ((widestApertureAtTeleEnd - widestApertureAtWideEnd) * ratio)
+    }
+
+    fun filterApertures(
+        options: List<ExposureOption<Float>>,
+        focalLengthMm: Int,
+    ): List<ExposureOption<Float>> {
+        val widestUsableAperture = effectiveWidestAperture(focalLengthMm)
+        return options.filter { option -> option.value in widestUsableAperture..narrowestAperture }
             .ifEmpty {
-                listOf(options.minByOrNull { option -> abs(option.value - widestAperture) } ?: options.first())
+                listOf(options.minByOrNull { option -> abs(option.value - widestUsableAperture) } ?: options.first())
             }
     }
 }
@@ -152,6 +193,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Generic digital body",
         description = "Fallback preset with a common 30 s to 1/8000 s shutter range and ISO 100 to 6400.",
         category = CameraBodyCategory.DIGITAL,
+        cropFactor = 1.0f,
         nativeMount = LensMount.GENERIC,
         nativeCompatibleMounts = setOf(LensMount.GENERIC),
         minIso = 100,
@@ -165,6 +207,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Canon EOS R6 Mark II",
         description = "Full-frame mirrorless preset with ISO 100 to 102400 and a standard 30 s to 1/8000 s shutter range.",
         category = CameraBodyCategory.DIGITAL,
+        cropFactor = 1.0f,
         nativeMount = LensMount.CANON_RF,
         nativeCompatibleMounts = setOf(LensMount.CANON_RF),
         adaptedCompatibleMounts = setOf(LensMount.CANON_EF),
@@ -179,6 +222,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Canon EOS R10",
         description = "APS-C mirrorless preset with ISO 100 to 32000 and a conservative 30 s to 1/4000 s shutter range.",
         category = CameraBodyCategory.DIGITAL,
+        cropFactor = 1.6f,
         nativeMount = LensMount.CANON_RF,
         nativeCompatibleMounts = setOf(LensMount.CANON_RF),
         adaptedCompatibleMounts = setOf(LensMount.CANON_EF),
@@ -193,6 +237,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Sony a7 IV",
         description = "Full-frame mirrorless preset with ISO 100 to 51200 and a standard 30 s to 1/8000 s shutter range.",
         category = CameraBodyCategory.DIGITAL,
+        cropFactor = 1.0f,
         nativeMount = LensMount.SONY_FE,
         nativeCompatibleMounts = setOf(LensMount.SONY_FE, LensMount.SONY_E),
         minIso = 100,
@@ -206,6 +251,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Nikon Z6 II",
         description = "Full-frame mirrorless preset with ISO 100 to 51200 and a standard 30 s to 1/8000 s shutter range.",
         category = CameraBodyCategory.DIGITAL,
+        cropFactor = 1.0f,
         nativeMount = LensMount.NIKON_Z,
         nativeCompatibleMounts = setOf(LensMount.NIKON_Z),
         adaptedCompatibleMounts = setOf(LensMount.NIKON_F),
@@ -220,6 +266,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Nikon FM2",
         description = "Manual 35mm film SLR preset with a mechanical 1 s to 1/4000 s shutter range plus bulb.",
         category = CameraBodyCategory.MANUAL_FILM,
+        cropFactor = 1.0f,
         nativeMount = LensMount.NIKON_F,
         nativeCompatibleMounts = setOf(LensMount.NIKON_F),
         minIso = 25,
@@ -234,6 +281,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Canon AE-1 Program",
         description = "Manual-focus film SLR preset with a 2 s to 1/1000 s shutter range plus bulb.",
         category = CameraBodyCategory.MANUAL_FILM,
+        cropFactor = 1.0f,
         nativeMount = LensMount.CANON_FD,
         nativeCompatibleMounts = setOf(LensMount.CANON_FD),
         minIso = 25,
@@ -248,6 +296,7 @@ internal val cameraBodyProfiles = listOf(
         label = "Pentax K1000",
         description = "Classic manual 35mm film SLR preset with a 1 s to 1/1000 s shutter range plus bulb.",
         category = CameraBodyCategory.MANUAL_FILM,
+        cropFactor = 1.0f,
         nativeMount = LensMount.PENTAX_K,
         nativeCompatibleMounts = setOf(LensMount.PENTAX_K),
         minIso = 20,
@@ -265,7 +314,10 @@ internal val lensProfiles = listOf(
         label = "Generic 24-70mm f/2.8",
         description = "Flexible fallback preset when the exact lens family is not important yet.",
         mount = LensMount.GENERIC,
-        widestAperture = 2.8f,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 70,
+        widestApertureAtWideEnd = 2.8f,
+        widestApertureAtTeleEnd = 2.8f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
@@ -273,7 +325,10 @@ internal val lensProfiles = listOf(
         label = "Canon RF 24-70mm F2.8L IS USM",
         description = "Constant-aperture professional zoom preset.",
         mount = LensMount.CANON_RF,
-        widestAperture = 2.8f,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 70,
+        widestApertureAtWideEnd = 2.8f,
+        widestApertureAtTeleEnd = 2.8f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
@@ -281,15 +336,30 @@ internal val lensProfiles = listOf(
         label = "Canon RF 24-105mm F4L IS USM",
         description = "Constant-aperture travel zoom preset.",
         mount = LensMount.CANON_RF,
-        widestAperture = 4.0f,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 105,
+        widestApertureAtWideEnd = 4.0f,
+        widestApertureAtTeleEnd = 4.0f,
         narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "canon_rf_24_240_4_63",
+        label = "Canon RF 24-240mm F4-6.3 IS USM",
+        description = "Travel zoom preset with a variable maximum aperture across the zoom range.",
+        mount = LensMount.CANON_RF,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 240,
+        widestApertureAtWideEnd = 4.0f,
+        widestApertureAtTeleEnd = 6.3f,
+        narrowestAperture = 40.0f,
     ),
     LensProfile(
         id = "canon_ef_50_14",
         label = "Canon EF 50mm f/1.4 USM",
         description = "Adapted fast normal prime preset with f/1.4 to f/22 coverage.",
         mount = LensMount.CANON_EF,
-        widestAperture = 1.4f,
+        minFocalLengthMm = 50,
+        widestApertureAtWideEnd = 1.4f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
@@ -297,15 +367,30 @@ internal val lensProfiles = listOf(
         label = "Nikon Z 24-70mm f/4 S",
         description = "Constant-aperture standard zoom preset.",
         mount = LensMount.NIKON_Z,
-        widestAperture = 4.0f,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 70,
+        widestApertureAtWideEnd = 4.0f,
+        widestApertureAtTeleEnd = 4.0f,
         narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "nikon_z_24_200_4_63",
+        label = "Nikon Z 24-200mm f/4-6.3 VR",
+        description = "Travel zoom preset with a variable maximum aperture across the zoom range.",
+        mount = LensMount.NIKON_Z,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 200,
+        widestApertureAtWideEnd = 4.0f,
+        widestApertureAtTeleEnd = 6.3f,
+        narrowestAperture = 32.0f,
     ),
     LensProfile(
         id = "nikon_f_50_18g",
         label = "Nikon AF-S 50mm f/1.8G",
         description = "Adapted fast prime preset with f/1.8 to f/16 coverage.",
         mount = LensMount.NIKON_F,
-        widestAperture = 1.8f,
+        minFocalLengthMm = 50,
+        widestApertureAtWideEnd = 1.8f,
         narrowestAperture = 16.0f,
     ),
     LensProfile(
@@ -313,7 +398,8 @@ internal val lensProfiles = listOf(
         label = "Nikon AI-S 50mm f/1.8",
         description = "Manual-focus normal prime preset for film and manual Nikon bodies.",
         mount = LensMount.NIKON_F,
-        widestAperture = 1.8f,
+        minFocalLengthMm = 50,
+        widestApertureAtWideEnd = 1.8f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
@@ -321,7 +407,8 @@ internal val lensProfiles = listOf(
         label = "Canon FD 50mm f/1.4",
         description = "Manual-focus normal prime preset for Canon FD film bodies.",
         mount = LensMount.CANON_FD,
-        widestAperture = 1.4f,
+        minFocalLengthMm = 50,
+        widestApertureAtWideEnd = 1.4f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
@@ -329,7 +416,8 @@ internal val lensProfiles = listOf(
         label = "SMC Pentax-M 50mm f/1.7",
         description = "Manual-focus normal prime preset for Pentax K film bodies.",
         mount = LensMount.PENTAX_K,
-        widestAperture = 1.7f,
+        minFocalLengthMm = 50,
+        widestApertureAtWideEnd = 1.7f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
@@ -337,18 +425,41 @@ internal val lensProfiles = listOf(
         label = "Sony FE 24-70mm F2.8 GM II",
         description = "Constant-aperture professional zoom preset.",
         mount = LensMount.SONY_FE,
-        widestAperture = 2.8f,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 70,
+        widestApertureAtWideEnd = 2.8f,
+        widestApertureAtTeleEnd = 2.8f,
         narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "sony_fe_24_240_35_63",
+        label = "Sony FE 24-240mm F3.5-6.3 OSS",
+        description = "Travel zoom preset with a variable maximum aperture across the zoom range.",
+        mount = LensMount.SONY_FE,
+        minFocalLengthMm = 24,
+        maxFocalLengthMm = 240,
+        widestApertureAtWideEnd = 3.5f,
+        widestApertureAtTeleEnd = 6.3f,
+        narrowestAperture = 40.0f,
     ),
     LensProfile(
         id = "sony_fe_35_18",
         label = "Sony FE 35mm F1.8",
         description = "Compact fast prime preset with f/1.8 to f/22 coverage.",
         mount = LensMount.SONY_FE,
-        widestAperture = 1.8f,
+        minFocalLengthMm = 35,
+        widestApertureAtWideEnd = 1.8f,
         narrowestAperture = 22.0f,
     ),
 )
+
+private fun formatCatalogDecimal(value: Double): String {
+    return if (abs(value - value.toInt().toDouble()) < 0.05) {
+        value.toInt().toString()
+    } else {
+        String.format(java.util.Locale.US, "%.1f", value)
+    }
+}
 
 private val FULL_STOP_APERTURES = listOf(
     ExposureOption(1.4f, "f/1.4"),

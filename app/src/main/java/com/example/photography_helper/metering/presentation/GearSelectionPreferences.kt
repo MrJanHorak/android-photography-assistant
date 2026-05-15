@@ -5,6 +5,7 @@ import android.content.Context
 internal data class SavedGearSelection(
     val bodyId: String,
     val lensId: String,
+    val selectedFocalLengthMm: Int,
     val allowAdaptedLenses: Boolean,
     val meteringSourceName: String,
     val stopModeName: String,
@@ -22,6 +23,7 @@ internal class GearSelectionPreferences(context: Context) {
     fun load(): SavedGearSelection? {
         val bodyId = sharedPreferences.getString(KEY_BODY_ID, null) ?: return null
         val lensId = sharedPreferences.getString(KEY_LENS_ID, null) ?: lensProfiles.first().id
+        val selectedFocalLengthMm = sharedPreferences.getInt(KEY_SELECTED_FOCAL_LENGTH_MM, lensProfiles.first().defaultFocalLengthMm())
         val allowAdaptedLenses = sharedPreferences.getBoolean(KEY_ALLOW_ADAPTED_LENSES, false)
         val meteringSourceName = sharedPreferences.getString(KEY_METERING_SOURCE_NAME, MeteringSource.AMBIENT_SENSOR.name)
             ?: MeteringSource.AMBIENT_SENSOR.name
@@ -33,6 +35,7 @@ internal class GearSelectionPreferences(context: Context) {
         return SavedGearSelection(
             bodyId = bodyId,
             lensId = lensId,
+            selectedFocalLengthMm = selectedFocalLengthMm,
             allowAdaptedLenses = allowAdaptedLenses,
             meteringSourceName = meteringSourceName,
             stopModeName = stopModeName,
@@ -46,6 +49,7 @@ internal class GearSelectionPreferences(context: Context) {
         sharedPreferences.edit()
             .putString(KEY_BODY_ID, selection.bodyId)
             .putString(KEY_LENS_ID, selection.lensId)
+            .putInt(KEY_SELECTED_FOCAL_LENGTH_MM, selection.selectedFocalLengthMm)
             .putBoolean(KEY_ALLOW_ADAPTED_LENSES, selection.allowAdaptedLenses)
             .putString(KEY_METERING_SOURCE_NAME, selection.meteringSourceName)
             .putString(KEY_STOP_MODE_NAME, selection.stopModeName)
@@ -59,6 +63,7 @@ internal class GearSelectionPreferences(context: Context) {
         const val PREFS_NAME = "gear_selection"
         const val KEY_BODY_ID = "body_id"
         const val KEY_LENS_ID = "lens_id"
+        const val KEY_SELECTED_FOCAL_LENGTH_MM = "selected_focal_length_mm"
         const val KEY_ALLOW_ADAPTED_LENSES = "allow_adapted_lenses"
         const val KEY_METERING_SOURCE_NAME = "metering_source_name"
         const val KEY_STOP_MODE_NAME = "stop_mode_name"
