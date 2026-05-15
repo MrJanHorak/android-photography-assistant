@@ -12,6 +12,16 @@ internal data class ShutterOption(
     val label: String,
 )
 
+internal enum class LensMount(val label: String) {
+    GENERIC("Any mount"),
+    CANON_RF("Canon RF"),
+    CANON_EF("Canon EF"),
+    NIKON_Z("Nikon Z"),
+    NIKON_F("Nikon F"),
+    SONY_FE("Sony FE"),
+    SONY_E("Sony E"),
+}
+
 internal enum class ExposureStopMode(
     val label: String,
     val apertureDescription: String,
@@ -42,12 +52,38 @@ internal data class CameraBodyProfile(
     val id: String,
     val label: String,
     val description: String,
+    val nativeMount: LensMount,
+    val nativeCompatibleMounts: Set<LensMount> = setOf(nativeMount),
+    val adaptedCompatibleMounts: Set<LensMount> = emptySet(),
     val minIso: Int,
     val maxIso: Int,
     val fastestShutterSeconds: Double,
     val longestStandardShutterSeconds: Double,
     val supportsBulb: Boolean = true,
 ) {
+    val nativeCompatibilitySummary: String
+        get() = when {
+            nativeMount == LensMount.GENERIC -> LensMount.GENERIC.label
+            nativeCompatibleMounts == setOf(nativeMount) -> nativeMount.label
+            else -> nativeCompatibleMounts
+                .sortedBy { mount -> mount.label }
+                .joinToString { mount -> mount.label }
+        }
+
+    val adaptedCompatibilitySummary: String
+        get() = adaptedCompatibleMounts
+            .sortedBy { mount -> mount.label }
+            .joinToString { mount -> mount.label }
+
+    fun availableMounts(allowAdaptedLenses: Boolean): Set<LensMount> {
+        return buildSet {
+            addAll(nativeCompatibleMounts)
+            if (allowAdaptedLenses) {
+                addAll(adaptedCompatibleMounts)
+            }
+        }
+    }
+
     fun filterIsos(options: List<ExposureOption<Int>>): List<ExposureOption<Int>> {
         return options.filter { option -> option.value in minIso..maxIso }
             .ifEmpty {
@@ -59,15 +95,29 @@ internal data class CameraBodyProfile(
         return options.filter { option -> option.seconds in fastestShutterSeconds..longestStandardShutterSeconds }
             .ifEmpty { options }
     }
+
+    fun supportsLens(lens: LensProfile, allowAdaptedLenses: Boolean): Boolean {
+        return nativeMount == LensMount.GENERIC ||
+            lens.mount == LensMount.GENERIC ||
+            lens.mount in availableMounts(allowAdaptedLenses)
+    }
 }
 
 internal data class LensProfile(
     val id: String,
     val label: String,
     val description: String,
+    val mount: LensMount,
     val widestAperture: Float,
     val narrowestAperture: Float,
 ) {
+    val mountSummary: String
+        get() = if (mount == LensMount.GENERIC) {
+            "Works with any body profile"
+        } else {
+            "Mount: ${mount.label}"
+        }
+
     fun filterApertures(options: List<ExposureOption<Float>>): List<ExposureOption<Float>> {
         return options.filter { option -> option.value in widestAperture..narrowestAperture }
             .ifEmpty {
@@ -76,11 +126,24 @@ internal data class LensProfile(
     }
 }
 
+internal fun compatibleLensProfiles(
+    body: CameraBodyProfile,
+    allowAdaptedLenses: Boolean,
+): List<LensProfile> {
+    return lensProfiles.filter { lens -> body.supportsLens(lens, allowAdaptedLenses) }
+        .ifEmpty {
+            lensProfiles.filter { lens -> lens.mount == LensMount.GENERIC }
+                .ifEmpty { lensProfiles.take(1) }
+        }
+}
+
 internal val cameraBodyProfiles = listOf(
     CameraBodyProfile(
         id = "generic_digital",
         label = "Generic digital body",
         description = "Fallback preset with a common 30 s to 1/8000 s shutter range and ISO 100 to 6400.",
+        nativeMount = LensMount.GENERIC,
+        nativeCompatibleMounts = setOf(LensMount.GENERIC),
         minIso = 100,
         maxIso = 6400,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -90,6 +153,9 @@ internal val cameraBodyProfiles = listOf(
         id = "canon_eos_r6_mk2",
         label = "Canon EOS R6 Mark II",
         description = "Full-frame mirrorless preset with ISO 100 to 102400 and a standard 30 s to 1/8000 s shutter range.",
+        nativeMount = LensMount.CANON_RF,
+        nativeCompatibleMounts = setOf(LensMount.CANON_RF),
+        adaptedCompatibleMounts = setOf(LensMount.CANON_EF),
         minIso = 100,
         maxIso = 102400,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -99,6 +165,9 @@ internal val cameraBodyProfiles = listOf(
         id = "canon_eos_r10",
         label = "Canon EOS R10",
         description = "APS-C mirrorless preset with ISO 100 to 32000 and a conservative 30 s to 1/4000 s shutter range.",
+        nativeMount = LensMount.CANON_RF,
+        nativeCompatibleMounts = setOf(LensMount.CANON_RF),
+        adaptedCompatibleMounts = setOf(LensMount.CANON_EF),
         minIso = 100,
         maxIso = 32000,
         fastestShutterSeconds = 1.0 / 4000.0,
@@ -108,6 +177,8 @@ internal val cameraBodyProfiles = listOf(
         id = "sony_a7_iv",
         label = "Sony a7 IV",
         description = "Full-frame mirrorless preset with ISO 100 to 51200 and a standard 30 s to 1/8000 s shutter range.",
+        nativeMount = LensMount.SONY_FE,
+        nativeCompatibleMounts = setOf(LensMount.SONY_FE, LensMount.SONY_E),
         minIso = 100,
         maxIso = 51200,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -117,6 +188,9 @@ internal val cameraBodyProfiles = listOf(
         id = "nikon_z6_ii",
         label = "Nikon Z6 II",
         description = "Full-frame mirrorless preset with ISO 100 to 51200 and a standard 30 s to 1/8000 s shutter range.",
+        nativeMount = LensMount.NIKON_Z,
+        nativeCompatibleMounts = setOf(LensMount.NIKON_Z),
+        adaptedCompatibleMounts = setOf(LensMount.NIKON_F),
         minIso = 100,
         maxIso = 51200,
         fastestShutterSeconds = 1.0 / 8000.0,
@@ -128,21 +202,16 @@ internal val lensProfiles = listOf(
     LensProfile(
         id = "generic_24_70_28",
         label = "Generic 24-70mm f/2.8",
-        description = "Generic constant-aperture standard zoom preset.",
+        description = "Flexible fallback preset when the exact lens family is not important yet.",
+        mount = LensMount.GENERIC,
         widestAperture = 2.8f,
-        narrowestAperture = 22.0f,
-    ),
-    LensProfile(
-        id = "canon_ef_50_14",
-        label = "Canon EF 50mm f/1.4 USM",
-        description = "Fast normal prime preset with f/1.4 to f/22 coverage.",
-        widestAperture = 1.4f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
         id = "canon_rf_24_70_28",
         label = "Canon RF 24-70mm F2.8L IS USM",
         description = "Constant-aperture professional zoom preset.",
+        mount = LensMount.CANON_RF,
         widestAperture = 2.8f,
         narrowestAperture = 22.0f,
     ),
@@ -150,22 +219,49 @@ internal val lensProfiles = listOf(
         id = "canon_rf_24_105_4",
         label = "Canon RF 24-105mm F4L IS USM",
         description = "Constant-aperture travel zoom preset.",
+        mount = LensMount.CANON_RF,
         widestAperture = 4.0f,
+        narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "canon_ef_50_14",
+        label = "Canon EF 50mm f/1.4 USM",
+        description = "Adapted fast normal prime preset with f/1.4 to f/22 coverage.",
+        mount = LensMount.CANON_EF,
+        widestAperture = 1.4f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
         id = "nikon_z_24_70_4",
         label = "Nikon Z 24-70mm f/4 S",
         description = "Constant-aperture standard zoom preset.",
+        mount = LensMount.NIKON_Z,
         widestAperture = 4.0f,
         narrowestAperture = 22.0f,
     ),
     LensProfile(
-        id = "sigma_35_14_art",
-        label = "Sigma 35mm F1.4 DG HSM Art",
-        description = "Fast wide-normal prime preset with f/1.4 to f/16 coverage.",
-        widestAperture = 1.4f,
+        id = "nikon_f_50_18g",
+        label = "Nikon AF-S 50mm f/1.8G",
+        description = "Adapted fast prime preset with f/1.8 to f/16 coverage.",
+        mount = LensMount.NIKON_F,
+        widestAperture = 1.8f,
         narrowestAperture = 16.0f,
+    ),
+    LensProfile(
+        id = "sony_fe_24_70_28_gm2",
+        label = "Sony FE 24-70mm F2.8 GM II",
+        description = "Constant-aperture professional zoom preset.",
+        mount = LensMount.SONY_FE,
+        widestAperture = 2.8f,
+        narrowestAperture = 22.0f,
+    ),
+    LensProfile(
+        id = "sony_fe_35_18",
+        label = "Sony FE 35mm F1.8",
+        description = "Compact fast prime preset with f/1.8 to f/22 coverage.",
+        mount = LensMount.SONY_FE,
+        widestAperture = 1.8f,
+        narrowestAperture = 22.0f,
     ),
 )
 
