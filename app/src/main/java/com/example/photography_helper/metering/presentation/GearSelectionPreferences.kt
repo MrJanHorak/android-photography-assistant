@@ -8,6 +8,7 @@ internal data class SavedGearSelection(
     val selectedFocalLengthMm: Int,
     val subjectMotionProfileName: String,
     val stabilizationModeName: String,
+    val workflowPriorityName: String,
     val allowAdaptedLenses: Boolean,
     val meteringSourceName: String,
     val stopModeName: String,
@@ -28,6 +29,7 @@ internal class GearSelectionPreferences(context: Context) {
         val selectedFocalLengthMm = sharedPreferences.getInt(KEY_SELECTED_FOCAL_LENGTH_MM, lensProfiles.first().defaultFocalLengthMm())
         val subjectMotionProfileName = sharedPreferences.getString(KEY_SUBJECT_MOTION_PROFILE_NAME, "STILL") ?: "STILL"
         val stabilizationModeName = sharedPreferences.getString(KEY_STABILIZATION_MODE_NAME, "OFF") ?: "OFF"
+        val workflowPriorityName = sharedPreferences.getString(KEY_WORKFLOW_PRIORITY_NAME, "ISO_FIRST") ?: "ISO_FIRST"
         val allowAdaptedLenses = sharedPreferences.getBoolean(KEY_ALLOW_ADAPTED_LENSES, false)
         val meteringSourceName = sharedPreferences.getString(KEY_METERING_SOURCE_NAME, MeteringSource.AMBIENT_SENSOR.name)
             ?: MeteringSource.AMBIENT_SENSOR.name
@@ -42,6 +44,7 @@ internal class GearSelectionPreferences(context: Context) {
             selectedFocalLengthMm = selectedFocalLengthMm,
             subjectMotionProfileName = subjectMotionProfileName,
             stabilizationModeName = stabilizationModeName,
+            workflowPriorityName = workflowPriorityName,
             allowAdaptedLenses = allowAdaptedLenses,
             meteringSourceName = meteringSourceName,
             stopModeName = stopModeName,
@@ -58,6 +61,7 @@ internal class GearSelectionPreferences(context: Context) {
             .putInt(KEY_SELECTED_FOCAL_LENGTH_MM, selection.selectedFocalLengthMm)
             .putString(KEY_SUBJECT_MOTION_PROFILE_NAME, selection.subjectMotionProfileName)
             .putString(KEY_STABILIZATION_MODE_NAME, selection.stabilizationModeName)
+            .putString(KEY_WORKFLOW_PRIORITY_NAME, selection.workflowPriorityName)
             .putBoolean(KEY_ALLOW_ADAPTED_LENSES, selection.allowAdaptedLenses)
             .putString(KEY_METERING_SOURCE_NAME, selection.meteringSourceName)
             .putString(KEY_STOP_MODE_NAME, selection.stopModeName)
@@ -74,6 +78,7 @@ internal class GearSelectionPreferences(context: Context) {
         const val KEY_SELECTED_FOCAL_LENGTH_MM = "selected_focal_length_mm"
         const val KEY_SUBJECT_MOTION_PROFILE_NAME = "subject_motion_profile_name"
         const val KEY_STABILIZATION_MODE_NAME = "stabilization_mode_name"
+        const val KEY_WORKFLOW_PRIORITY_NAME = "workflow_priority_name"
         const val KEY_ALLOW_ADAPTED_LENSES = "allow_adapted_lenses"
         const val KEY_METERING_SOURCE_NAME = "metering_source_name"
         const val KEY_STOP_MODE_NAME = "stop_mode_name"

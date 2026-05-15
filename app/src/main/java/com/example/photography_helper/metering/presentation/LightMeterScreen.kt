@@ -121,6 +121,82 @@ private enum class StabilizationMode(
     ),
 }
 
+private enum class WorkflowPriority(
+    val label: String,
+    val description: String,
+) {
+    ISO_FIRST(
+        label = "ISO first",
+        description = "Keep the chosen aperture as long as possible and raise ISO first when the shutter is too slow.",
+    ),
+    APERTURE_FIRST(
+        label = "Aperture first",
+        description = "Open the lens first, then raise ISO only if the shutter still needs help.",
+    ),
+    SHUTTER_FIRST(
+        label = "Shutter first",
+        description = "Set a safe shutter target first and let the app show what ISO or aperture that requires.",
+    ),
+}
+
+private enum class ScenePreset(
+    val label: String,
+    val description: String,
+    val subjectMotionProfile: SubjectMotionProfile?,
+    private val stabilizationPreferenceOrder: List<StabilizationMode>,
+) {
+    CUSTOM(
+        label = "Custom",
+        description = "Keep your manual subject-motion and stabilization choices.",
+        subjectMotionProfile = null,
+        stabilizationPreferenceOrder = emptyList(),
+    ),
+    TRIPOD(
+        label = "Tripod",
+        description = "Static scenes on support. Stabilization is disabled and motion assumptions stay conservative.",
+        subjectMotionProfile = SubjectMotionProfile.STILL,
+        stabilizationPreferenceOrder = listOf(StabilizationMode.OFF),
+    ),
+    NIGHT_STREET(
+        label = "Night street",
+        description = "Walking people, available light, and as much stabilization as the kit can offer.",
+        subjectMotionProfile = SubjectMotionProfile.WALKING,
+        stabilizationPreferenceOrder = listOf(
+            StabilizationMode.HYBRID,
+            StabilizationMode.BODY_ONLY,
+            StabilizationMode.LENS_ONLY,
+            StabilizationMode.OFF,
+        ),
+    ),
+    WILDLIFE(
+        label = "Wildlife",
+        description = "Fast subject motion with long lenses. The preset keeps the shutter bias aggressive.",
+        subjectMotionProfile = SubjectMotionProfile.SPORTS,
+        stabilizationPreferenceOrder = listOf(
+            StabilizationMode.HYBRID,
+            StabilizationMode.LENS_ONLY,
+            StabilizationMode.BODY_ONLY,
+            StabilizationMode.OFF,
+        ),
+    ),
+    INDOOR_EVENT(
+        label = "Indoor event",
+        description = "People movement in low light, with stabilization enabled whenever the gear supports it.",
+        subjectMotionProfile = SubjectMotionProfile.PORTRAIT,
+        stabilizationPreferenceOrder = listOf(
+            StabilizationMode.HYBRID,
+            StabilizationMode.BODY_ONLY,
+            StabilizationMode.LENS_ONLY,
+            StabilizationMode.OFF,
+        ),
+    );
+
+    fun resolveStabilizationMode(availableModes: List<StabilizationMode>): StabilizationMode? {
+        return stabilizationPreferenceOrder.firstOrNull { mode -> mode in availableModes }
+            ?: availableModes.firstOrNull()
+    }
+}
+
 @Composable
 fun LightMeterScreen(
     modifier: Modifier = Modifier,
@@ -129,7 +205,9 @@ fun LightMeterScreen(
     val meteringState by viewModel.meteringState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
-    val gearCatalog = remember(context) { GearCatalogLoader.load(context) }
+    var gearCatalog by remember(context) { mutableStateOf(GearCatalogLoader.load(context)) }
+    var catalogStatusMessage by remember(context) { mutableStateOf<String?>(null) }
+    var catalogStatusIsError by remember(context) { mutableStateOf(false) }
     val allBodies = gearCatalog.cameraBodyProfiles
     val allLenses = gearCatalog.lensProfiles
     val gearPreferences = remember(context) { GearSelectionPreferences(context) }
@@ -142,6 +220,23 @@ fun LightMeterScreen(
             viewModel.setCameraPermissionGranted(granted)
         },
     )
+    val catalogImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+
+            GearCatalogLoader.importFromUri(context, uri)
+                .onSuccess { importedCatalog ->
+                    gearCatalog = importedCatalog
+                    catalogStatusIsError = false
+                    catalogStatusMessage = "Imported custom gear JSON and merged it over the bundled catalog by id."
+                }
+                .onFailure { throwable ->
+                    catalogStatusIsError = true
+                    catalogStatusMessage = throwable.message ?: "Unable to import the selected JSON catalog."
+                }
+        },
+    )
 
     var bodyId by rememberSaveable { mutableStateOf(savedGearSelection?.bodyId ?: allBodies.first().id) }
     var lensId by rememberSaveable { mutableStateOf(savedGearSelection?.lensId ?: allLenses.first().id) }
@@ -150,6 +245,7 @@ fun LightMeterScreen(
     }
     var subjectMotionProfileName by rememberSaveable { mutableStateOf(savedGearSelection?.subjectMotionProfileName ?: SubjectMotionProfile.STILL.name) }
     var stabilizationModeName by rememberSaveable { mutableStateOf(savedGearSelection?.stabilizationModeName ?: StabilizationMode.OFF.name) }
+    var workflowPriorityName by rememberSaveable { mutableStateOf(savedGearSelection?.workflowPriorityName ?: WorkflowPriority.ISO_FIRST.name) }
     var allowAdaptedLenses by rememberSaveable { mutableStateOf(savedGearSelection?.allowAdaptedLenses ?: false) }
     var bodyCategoryFilterName by rememberSaveable { mutableStateOf(BodyCategoryFilter.ALL.name) }
     var meteringSourceName by rememberSaveable {
@@ -163,6 +259,7 @@ fun LightMeterScreen(
     val bodyCategoryFilter = remember(bodyCategoryFilterName) { BodyCategoryFilter.valueOf(bodyCategoryFilterName) }
     val meteringSource = remember(meteringSourceName) { MeteringSource.valueOf(meteringSourceName) }
     val subjectMotionProfile = remember(subjectMotionProfileName) { SubjectMotionProfile.valueOf(subjectMotionProfileName) }
+    val workflowPriority = remember(workflowPriorityName) { WorkflowPriority.valueOf(workflowPriorityName) }
     val availableBodies = remember(bodyCategoryFilter) {
         bodyCategoryFilter.category?.let { category ->
             allBodies.filter { profile -> profile.category == category }
@@ -186,6 +283,13 @@ fun LightMeterScreen(
     val availableStabilizationModes = remember(body, lens) { availableStabilizationModes(body, lens) }
     val stabilizationMode = remember(stabilizationModeName, availableStabilizationModes) {
         availableStabilizationModes.firstOrNull { it.name == stabilizationModeName } ?: availableStabilizationModes.first()
+    }
+    val scenePreset = remember(subjectMotionProfile, stabilizationMode, availableStabilizationModes) {
+        matchingScenePreset(
+            subjectMotionProfile = subjectMotionProfile,
+            stabilizationMode = stabilizationMode,
+            availableModes = availableStabilizationModes,
+        )
     }
 
     LaunchedEffect(body.id, compatibleLenses, lensId) {
@@ -219,6 +323,7 @@ fun LightMeterScreen(
         focalLengthMm,
         subjectMotionProfile.name,
         stabilizationMode.name,
+        workflowPriority.name,
         allowAdaptedLenses,
         meteringSource.name,
         stopMode.name,
@@ -233,6 +338,7 @@ fun LightMeterScreen(
                 selectedFocalLengthMm = focalLengthMm,
                 subjectMotionProfileName = subjectMotionProfile.name,
                 stabilizationModeName = stabilizationMode.name,
+                workflowPriorityName = workflowPriority.name,
                 allowAdaptedLenses = allowAdaptedLenses,
                 meteringSourceName = meteringSource.name,
                 stopModeName = stopMode.name,
@@ -327,6 +433,25 @@ fun LightMeterScreen(
     )
     val motionMinimumShutterSeconds = subjectMotionProfile.minimumShutterSeconds
     val recommendedMinimumShutterSeconds = minOf(handheldMinimumShutterSeconds, motionMinimumShutterSeconds)
+    val workflowSuggestion = remember(
+        workflowPriority,
+        shutterSpeed,
+        recommendedMinimumShutterSeconds,
+        aperture,
+        iso,
+        apertureOptions,
+        isoOptions,
+    ) {
+        buildExposureWorkflowSuggestion(
+            workflowPriority = workflowPriority,
+            measuredShutterSeconds = shutterSpeed,
+            recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
+            currentAperture = aperture,
+            currentIso = iso,
+            apertureOptions = apertureOptions,
+            isoOptions = isoOptions,
+        )
+    }
 
     Column(
         modifier = modifier
@@ -389,6 +514,21 @@ fun LightMeterScreen(
             onAllowAdaptedLensesChanged = { allowAdaptedLenses = it },
         )
 
+        CatalogManagementCard(
+            gearCatalog = gearCatalog,
+            hasImportedCatalog = GearCatalogLoader.hasImportedCatalog(context),
+            statusMessage = catalogStatusMessage,
+            statusIsError = catalogStatusIsError,
+            onImportCatalog = {
+                catalogImportLauncher.launch(arrayOf("application/json", "text/*"))
+            },
+            onResetCatalog = {
+                gearCatalog = GearCatalogLoader.clearImportedCatalog(context)
+                catalogStatusIsError = false
+                catalogStatusMessage = "Restored the bundled gear catalog."
+            },
+        )
+
         LensSetupCard(
             body = body,
             lens = lens,
@@ -397,15 +537,28 @@ fun LightMeterScreen(
         )
 
         ShootingAidCard(
+            scenePreset = scenePreset,
             subjectMotionProfile = subjectMotionProfile,
             stabilizationMode = stabilizationMode,
+            workflowPriority = workflowPriority,
             availableStabilizationModes = availableStabilizationModes,
             handheldMinimumShutterSeconds = handheldMinimumShutterSeconds,
             motionMinimumShutterSeconds = motionMinimumShutterSeconds,
             recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
             measuredShutterSeconds = shutterSpeed,
+            workflowSuggestion = workflowSuggestion,
+            onScenePresetSelected = { preset ->
+                if (preset == ScenePreset.CUSTOM) return@ShootingAidCard
+                preset.subjectMotionProfile?.let { profile ->
+                    subjectMotionProfileName = profile.name
+                }
+                preset.resolveStabilizationMode(availableStabilizationModes)?.let { mode ->
+                    stabilizationModeName = mode.name
+                }
+            },
             onSubjectMotionSelected = { subjectMotionProfileName = it.name },
             onStabilizationModeSelected = { stabilizationModeName = it.name },
+            onWorkflowPrioritySelected = { workflowPriorityName = it.name },
         )
 
         StopModeSelector(
@@ -448,6 +601,65 @@ fun LightMeterScreen(
                 valueRange = -3f..3f,
                 modifier = Modifier.width(200.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun CatalogManagementCard(
+    gearCatalog: GearCatalog,
+    hasImportedCatalog: Boolean,
+    statusMessage: String?,
+    statusIsError: Boolean,
+    onImportCatalog: () -> Unit,
+    onResetCatalog: () -> Unit,
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Catalog",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "${gearCatalog.source.label}: ${gearCatalog.cameraBodyProfiles.size} bodies and ${gearCatalog.lensProfiles.size} lenses are available right now.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "Import a JSON catalog to add or override gear entries by id without editing the bundled asset.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                FilledTonalButton(
+                    onClick = onImportCatalog,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Import JSON")
+                }
+                OutlinedButton(
+                    onClick = onResetCatalog,
+                    enabled = hasImportedCatalog,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Reset to bundled")
+                }
+            }
+            statusMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (statusIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -641,15 +853,20 @@ private fun LensSetupCard(
 
 @Composable
 private fun ShootingAidCard(
+    scenePreset: ScenePreset,
     subjectMotionProfile: SubjectMotionProfile,
     stabilizationMode: StabilizationMode,
+    workflowPriority: WorkflowPriority,
     availableStabilizationModes: List<StabilizationMode>,
     handheldMinimumShutterSeconds: Double,
     motionMinimumShutterSeconds: Double,
     recommendedMinimumShutterSeconds: Double,
     measuredShutterSeconds: Double?,
+    workflowSuggestion: String,
+    onScenePresetSelected: (ScenePreset) -> Unit,
     onSubjectMotionSelected: (SubjectMotionProfile) -> Unit,
     onStabilizationModeSelected: (StabilizationMode) -> Unit,
+    onWorkflowPrioritySelected: (WorkflowPriority) -> Unit,
 ) {
     val assessment = remember(measuredShutterSeconds, recommendedMinimumShutterSeconds, subjectMotionProfile, stabilizationMode) {
         buildShootingAidAssessment(
@@ -677,6 +894,14 @@ private fun ShootingAidCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SelectionDropdownField(
+                label = "Scene preset",
+                selectedText = scenePreset.label,
+                supportingText = scenePreset.description,
+                options = ScenePreset.entries,
+                optionLabel = { preset -> preset.label },
+                onSelected = onScenePresetSelected,
+            )
+            SelectionDropdownField(
                 label = "Subject motion",
                 selectedText = subjectMotionProfile.label,
                 supportingText = subjectMotionProfile.description,
@@ -691,6 +916,14 @@ private fun ShootingAidCard(
                 options = availableStabilizationModes,
                 optionLabel = { mode -> mode.label },
                 onSelected = onStabilizationModeSelected,
+            )
+            SelectionDropdownField(
+                label = "Workflow priority",
+                selectedText = workflowPriority.label,
+                supportingText = workflowPriority.description,
+                options = WorkflowPriority.entries,
+                optionLabel = { priority -> priority.label },
+                onSelected = onWorkflowPrioritySelected,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -712,6 +945,11 @@ private fun ShootingAidCard(
                     modifier = Modifier.weight(1f),
                 )
             }
+            Text(
+                text = workflowSuggestion,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(
                 text = assessment,
                 style = MaterialTheme.typography.bodySmall,
@@ -1212,6 +1450,180 @@ private fun availableStabilizationModes(
         if (lens.hasOpticalStabilization && body.hasInBodyStabilization) {
             add(StabilizationMode.HYBRID)
         }
+    }
+}
+
+private fun matchingScenePreset(
+    subjectMotionProfile: SubjectMotionProfile,
+    stabilizationMode: StabilizationMode,
+    availableModes: List<StabilizationMode>,
+): ScenePreset {
+    return ScenePreset.entries.firstOrNull { preset ->
+        preset != ScenePreset.CUSTOM &&
+            preset.subjectMotionProfile == subjectMotionProfile &&
+            preset.resolveStabilizationMode(availableModes) == stabilizationMode
+    } ?: ScenePreset.CUSTOM
+}
+
+private fun buildExposureWorkflowSuggestion(
+    workflowPriority: WorkflowPriority,
+    measuredShutterSeconds: Double?,
+    recommendedMinimumShutterSeconds: Double,
+    currentAperture: Float,
+    currentIso: Int,
+    apertureOptions: List<ExposureOption<Float>>,
+    isoOptions: List<ExposureOption<Int>>,
+): String {
+    val measuredSeconds = measuredShutterSeconds
+        ?: return "Awaiting a metered shutter before workflow coaching can suggest what to change first."
+
+    if (measuredSeconds <= recommendedMinimumShutterSeconds) {
+        return "Current settings already meet the practical shutter target. Use ${workflowPriority.label.lowercase(Locale.getDefault())} only if you want more safety margin."
+    }
+
+    val requiredGainStops = log2(measuredSeconds / recommendedMinimumShutterSeconds)
+    return when (workflowPriority) {
+        WorkflowPriority.ISO_FIRST -> buildIsoFirstWorkflowSuggestion(
+            requiredGainStops = requiredGainStops,
+            recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
+            currentAperture = currentAperture,
+            currentIso = currentIso,
+            apertureOptions = apertureOptions,
+            isoOptions = isoOptions,
+        )
+
+        WorkflowPriority.APERTURE_FIRST -> buildApertureFirstWorkflowSuggestion(
+            requiredGainStops = requiredGainStops,
+            recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
+            currentAperture = currentAperture,
+            currentIso = currentIso,
+            apertureOptions = apertureOptions,
+            isoOptions = isoOptions,
+        )
+
+        WorkflowPriority.SHUTTER_FIRST -> buildShutterFirstWorkflowSuggestion(
+            requiredGainStops = requiredGainStops,
+            recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
+            currentAperture = currentAperture,
+            currentIso = currentIso,
+            apertureOptions = apertureOptions,
+            isoOptions = isoOptions,
+        )
+    }
+}
+
+private fun buildIsoFirstWorkflowSuggestion(
+    requiredGainStops: Double,
+    recommendedMinimumShutterSeconds: Double,
+    currentAperture: Float,
+    currentIso: Int,
+    apertureOptions: List<ExposureOption<Float>>,
+    isoOptions: List<ExposureOption<Int>>,
+): String {
+    val targetIsoOption = pickIsoOptionForGain(currentIso, requiredGainStops, isoOptions)
+    val isoGainStops = log2(targetIsoOption.value.toDouble() / currentIso.toDouble())
+    val remainingStops = (requiredGainStops - isoGainStops).coerceAtLeast(0.0)
+
+    if (remainingStops <= 0.05) {
+        return "Raise ISO first to ${targetIsoOption.label} and keep f/${formatDecimal(currentAperture.toDouble())}. That should support ${formatExposureTime(recommendedMinimumShutterSeconds)}."
+    }
+
+    val targetApertureOption = pickApertureOptionForGain(currentAperture, remainingStops, apertureOptions)
+    val apertureGainStops = apertureGainStops(currentAperture, targetApertureOption.value)
+    val unresolvedStops = (remainingStops - apertureGainStops).coerceAtLeast(0.0)
+
+    return if (unresolvedStops <= 0.05) {
+        "Raise ISO to ${targetIsoOption.label} first, then open to ${targetApertureOption.label} to support ${formatExposureTime(recommendedMinimumShutterSeconds)}."
+    } else {
+        "Even at ${targetIsoOption.label} and ${targetApertureOption.label}, you are still about ${formatStopCount(unresolvedStops)} short. Add light, accept blur, or add support."
+    }
+}
+
+private fun buildApertureFirstWorkflowSuggestion(
+    requiredGainStops: Double,
+    recommendedMinimumShutterSeconds: Double,
+    currentAperture: Float,
+    currentIso: Int,
+    apertureOptions: List<ExposureOption<Float>>,
+    isoOptions: List<ExposureOption<Int>>,
+): String {
+    val targetApertureOption = pickApertureOptionForGain(currentAperture, requiredGainStops, apertureOptions)
+    val apertureGainStops = apertureGainStops(currentAperture, targetApertureOption.value)
+    val remainingStops = (requiredGainStops - apertureGainStops).coerceAtLeast(0.0)
+
+    if (remainingStops <= 0.05) {
+        return "Open the lens first to ${targetApertureOption.label} and keep ISO $currentIso. That should support ${formatExposureTime(recommendedMinimumShutterSeconds)}."
+    }
+
+    val targetIsoOption = pickIsoOptionForGain(currentIso, remainingStops, isoOptions)
+    val isoGainStops = log2(targetIsoOption.value.toDouble() / currentIso.toDouble())
+    val unresolvedStops = (remainingStops - isoGainStops).coerceAtLeast(0.0)
+
+    return if (unresolvedStops <= 0.05) {
+        "Open to ${targetApertureOption.label} first, then raise ISO to ${targetIsoOption.label} to support ${formatExposureTime(recommendedMinimumShutterSeconds)}."
+    } else {
+        "Even wide open at ${targetApertureOption.label} and ${targetIsoOption.label}, you are still about ${formatStopCount(unresolvedStops)} short. Add light or relax the shutter goal."
+    }
+}
+
+private fun buildShutterFirstWorkflowSuggestion(
+    requiredGainStops: Double,
+    recommendedMinimumShutterSeconds: Double,
+    currentAperture: Float,
+    currentIso: Int,
+    apertureOptions: List<ExposureOption<Float>>,
+    isoOptions: List<ExposureOption<Int>>,
+): String {
+    val targetIsoOption = pickIsoOptionForGain(currentIso, requiredGainStops, isoOptions)
+    val isoGainStops = log2(targetIsoOption.value.toDouble() / currentIso.toDouble())
+    val remainingStops = (requiredGainStops - isoGainStops).coerceAtLeast(0.0)
+
+    if (remainingStops <= 0.05) {
+        return "Dial ${formatExposureTime(recommendedMinimumShutterSeconds)} first. At f/${formatDecimal(currentAperture.toDouble())}, aim for ${targetIsoOption.label}."
+    }
+
+    val targetApertureOption = pickApertureOptionForGain(currentAperture, remainingStops, apertureOptions)
+    val apertureGainStops = apertureGainStops(currentAperture, targetApertureOption.value)
+    val unresolvedStops = (remainingStops - apertureGainStops).coerceAtLeast(0.0)
+
+    return if (unresolvedStops <= 0.05) {
+        "Dial ${formatExposureTime(recommendedMinimumShutterSeconds)} first. At ${targetApertureOption.label}, ${targetIsoOption.label} should cover it."
+    } else {
+        "Dial ${formatExposureTime(recommendedMinimumShutterSeconds)} first. Even at ${targetApertureOption.label} and ${targetIsoOption.label}, you are still about ${formatStopCount(unresolvedStops)} short."
+    }
+}
+
+private fun pickIsoOptionForGain(
+    currentIso: Int,
+    requiredGainStops: Double,
+    isoOptions: List<ExposureOption<Int>>,
+): ExposureOption<Int> {
+    val targetIso = currentIso * 2.0.pow(requiredGainStops)
+    return isoOptions.firstOrNull { option -> option.value >= targetIso.roundToInt() } ?: isoOptions.last()
+}
+
+private fun pickApertureOptionForGain(
+    currentAperture: Float,
+    requiredGainStops: Double,
+    apertureOptions: List<ExposureOption<Float>>,
+): ExposureOption<Float> {
+    val candidates = apertureOptions.filter { option -> option.value <= currentAperture + 0.01f }
+    return candidates
+        .filter { option -> apertureGainStops(currentAperture, option.value) + 0.05 >= requiredGainStops }
+        .maxByOrNull { option -> option.value }
+        ?: candidates.first()
+}
+
+private fun apertureGainStops(currentAperture: Float, targetAperture: Float): Double {
+    return log2((currentAperture.toDouble() * currentAperture.toDouble()) / (targetAperture.toDouble() * targetAperture.toDouble()))
+}
+
+private fun formatStopCount(stops: Double): String {
+    val value = String.format(Locale.getDefault(), "%.1f", stops)
+    return if (abs(stops - 1.0) < 0.05) {
+        "$value stop"
+    } else {
+        "$value stops"
     }
 }
 

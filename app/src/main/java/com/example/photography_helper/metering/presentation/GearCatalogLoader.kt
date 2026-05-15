@@ -1,38 +1,94 @@
 package com.example.photography_helper.metering.presentation
 
 import android.content.Context
+import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+
+internal enum class GearCatalogSource(val label: String) {
+    BUNDLED("Bundled catalog"),
+    IMPORTED("Imported catalog"),
+    FALLBACK("Built-in fallback"),
+}
 
 internal data class GearCatalog(
     val cameraBodyProfiles: List<CameraBodyProfile>,
     val lensProfiles: List<LensProfile>,
+    val source: GearCatalogSource,
 )
 
 internal object GearCatalogLoader {
     private const val ASSET_FILE_NAME = "gear_catalog.json"
+    private const val IMPORTED_FILE_NAME = "gear_catalog_override.json"
 
     fun load(context: Context): GearCatalog {
+        val bundledCatalog = loadBundledCatalog(context)
+        val importedFile = importedCatalogFile(context)
+
+        if (!importedFile.exists()) {
+            return bundledCatalog
+        }
+
+        val importedCatalog = runCatching {
+            parse(importedFile.readText())
+        }.getOrNull() ?: return bundledCatalog
+
+        return mergeCatalogs(bundledCatalog, importedCatalog).copy(source = GearCatalogSource.IMPORTED)
+    }
+
+    fun importFromUri(context: Context, uri: Uri): Result<GearCatalog> {
+        return runCatching {
+            val importedJson = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
+                reader.readText()
+            } ?: error("Unable to read the selected catalog file.")
+
+            parse(importedJson)
+            importedCatalogFile(context).writeText(importedJson)
+            load(context)
+        }
+    }
+
+    fun clearImportedCatalog(context: Context): GearCatalog {
+        importedCatalogFile(context).delete()
+        return load(context)
+    }
+
+    fun hasImportedCatalog(context: Context): Boolean = importedCatalogFile(context).exists()
+
+    private fun loadBundledCatalog(context: Context): GearCatalog {
         return runCatching {
             context.assets.open(ASSET_FILE_NAME).bufferedReader().use { reader ->
                 parse(reader.readText())
             }
-        }.getOrElse {
+        }.map { parsedCatalog ->
             GearCatalog(
-                cameraBodyProfiles = cameraBodyProfiles,
-                lensProfiles = lensProfiles,
+                cameraBodyProfiles = parsedCatalog.cameraBodyProfiles.ifEmpty { cameraBodyProfiles },
+                lensProfiles = parsedCatalog.lensProfiles.ifEmpty { lensProfiles },
+                source = GearCatalogSource.BUNDLED,
             )
+        }.getOrElse {
+            GearCatalog(cameraBodyProfiles, lensProfiles, GearCatalogSource.FALLBACK)
         }
     }
 
     private fun parse(json: String): GearCatalog {
         val root = JSONObject(json)
-        val parsedBodies = root.optJSONArray("cameraBodyProfiles")?.toCameraBodyProfiles().orEmpty()
-        val parsedLenses = root.optJSONArray("lensProfiles")?.toLensProfiles().orEmpty()
-
         return GearCatalog(
-            cameraBodyProfiles = parsedBodies.ifEmpty { cameraBodyProfiles },
-            lensProfiles = parsedLenses.ifEmpty { lensProfiles },
+            cameraBodyProfiles = root.optJSONArray("cameraBodyProfiles")?.toCameraBodyProfiles().orEmpty(),
+            lensProfiles = root.optJSONArray("lensProfiles")?.toLensProfiles().orEmpty(),
+            source = GearCatalogSource.BUNDLED,
+        )
+    }
+
+    private fun mergeCatalogs(
+        bundledCatalog: GearCatalog,
+        importedCatalog: GearCatalog,
+    ): GearCatalog {
+        return GearCatalog(
+            cameraBodyProfiles = mergeById(bundledCatalog.cameraBodyProfiles, importedCatalog.cameraBodyProfiles) { profile -> profile.id },
+            lensProfiles = mergeById(bundledCatalog.lensProfiles, importedCatalog.lensProfiles) { profile -> profile.id },
+            source = GearCatalogSource.IMPORTED,
         )
     }
 
@@ -88,5 +144,22 @@ internal object GearCatalogLoader {
 
     private fun JSONArray.toLensMountSet(): Set<LensMount> {
         return List(length()) { index -> LensMount.valueOf(getString(index)) }.toSet()
+    }
+
+    private fun importedCatalogFile(context: Context): File = File(context.filesDir, IMPORTED_FILE_NAME)
+
+    private fun <T> mergeById(
+        baseItems: List<T>,
+        overrideItems: List<T>,
+        keySelector: (T) -> String,
+    ): List<T> {
+        val mergedMap = LinkedHashMap<String, T>()
+        baseItems.forEach { item ->
+            mergedMap[keySelector(item)] = item
+        }
+        overrideItems.forEach { item ->
+            mergedMap[keySelector(item)] = item
+        }
+        return mergedMap.values.toList()
     }
 }
