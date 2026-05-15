@@ -6,6 +6,7 @@ internal data class SavedGearSelection(
     val bodyId: String,
     val lensId: String,
     val allowAdaptedLenses: Boolean,
+    val meteringSourceName: String,
     val stopModeName: String,
     val selectedIso: Int,
     val selectedAperture: Float,
@@ -22,6 +23,8 @@ internal class GearSelectionPreferences(context: Context) {
         val bodyId = sharedPreferences.getString(KEY_BODY_ID, null) ?: return null
         val lensId = sharedPreferences.getString(KEY_LENS_ID, null) ?: lensProfiles.first().id
         val allowAdaptedLenses = sharedPreferences.getBoolean(KEY_ALLOW_ADAPTED_LENSES, false)
+        val meteringSourceName = sharedPreferences.getString(KEY_METERING_SOURCE_NAME, MeteringSource.AMBIENT_SENSOR.name)
+            ?: MeteringSource.AMBIENT_SENSOR.name
         val stopModeName = sharedPreferences.getString(KEY_STOP_MODE_NAME, ExposureStopMode.FULL.name)
             ?: ExposureStopMode.FULL.name
         val selectedIso = sharedPreferences.getInt(KEY_SELECTED_ISO, 100)
@@ -31,6 +34,7 @@ internal class GearSelectionPreferences(context: Context) {
             bodyId = bodyId,
             lensId = lensId,
             allowAdaptedLenses = allowAdaptedLenses,
+            meteringSourceName = meteringSourceName,
             stopModeName = stopModeName,
             selectedIso = selectedIso,
             selectedAperture = selectedAperture,
@@ -43,10 +47,11 @@ internal class GearSelectionPreferences(context: Context) {
             .putString(KEY_BODY_ID, selection.bodyId)
             .putString(KEY_LENS_ID, selection.lensId)
             .putBoolean(KEY_ALLOW_ADAPTED_LENSES, selection.allowAdaptedLenses)
-                .putString(KEY_STOP_MODE_NAME, selection.stopModeName)
-                .putInt(KEY_SELECTED_ISO, selection.selectedIso)
-                .putFloat(KEY_SELECTED_APERTURE, selection.selectedAperture)
-                .putFloat(KEY_CALIBRATION_OFFSET, selection.calibrationOffset)
+            .putString(KEY_METERING_SOURCE_NAME, selection.meteringSourceName)
+            .putString(KEY_STOP_MODE_NAME, selection.stopModeName)
+            .putInt(KEY_SELECTED_ISO, selection.selectedIso)
+            .putFloat(KEY_SELECTED_APERTURE, selection.selectedAperture)
+            .putFloat(KEY_CALIBRATION_OFFSET, selection.calibrationOffset)
             .apply()
     }
 
@@ -55,6 +60,7 @@ internal class GearSelectionPreferences(context: Context) {
         const val KEY_BODY_ID = "body_id"
         const val KEY_LENS_ID = "lens_id"
         const val KEY_ALLOW_ADAPTED_LENSES = "allow_adapted_lenses"
+        const val KEY_METERING_SOURCE_NAME = "metering_source_name"
         const val KEY_STOP_MODE_NAME = "stop_mode_name"
         const val KEY_SELECTED_ISO = "selected_iso"
         const val KEY_SELECTED_APERTURE = "selected_aperture"

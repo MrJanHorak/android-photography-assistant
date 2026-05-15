@@ -1,9 +1,13 @@
 package com.example.photography_helper.metering.presentation
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -66,17 +71,29 @@ fun LightMeterScreen(
     val context = LocalContext.current
     val gearPreferences = remember(context) { GearSelectionPreferences(context) }
     val savedGearSelection = remember(gearPreferences) { gearPreferences.load() }
+    var hasCameraPermission by rememberSaveable { mutableStateOf(isCameraPermissionGranted(context)) }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            hasCameraPermission = granted
+            viewModel.setCameraPermissionGranted(granted)
+        },
+    )
 
     var bodyId by rememberSaveable { mutableStateOf(savedGearSelection?.bodyId ?: cameraBodyProfiles.first().id) }
     var lensId by rememberSaveable { mutableStateOf(savedGearSelection?.lensId ?: lensProfiles.first().id) }
     var allowAdaptedLenses by rememberSaveable { mutableStateOf(savedGearSelection?.allowAdaptedLenses ?: false) }
     var bodyCategoryFilterName by rememberSaveable { mutableStateOf(BodyCategoryFilter.ALL.name) }
+    var meteringSourceName by rememberSaveable {
+        mutableStateOf(savedGearSelection?.meteringSourceName ?: MeteringSource.AMBIENT_SENSOR.name)
+    }
     var stopModeName by rememberSaveable { mutableStateOf(savedGearSelection?.stopModeName ?: ExposureStopMode.FULL.name) }
     var selectedAperture by rememberSaveable { mutableFloatStateOf(savedGearSelection?.selectedAperture ?: 2.8f) }
     var selectedIso by rememberSaveable { mutableIntStateOf(savedGearSelection?.selectedIso ?: 100) }
     var calibrationOffset by rememberSaveable { mutableFloatStateOf(savedGearSelection?.calibrationOffset ?: 0f) }
 
     val bodyCategoryFilter = remember(bodyCategoryFilterName) { BodyCategoryFilter.valueOf(bodyCategoryFilterName) }
+    val meteringSource = remember(meteringSourceName) { MeteringSource.valueOf(meteringSourceName) }
     val availableBodies = remember(bodyCategoryFilter) {
         bodyCategoryFilter.category?.let { category ->
             cameraBodyProfiles.filter { profile -> profile.category == category }
@@ -113,12 +130,25 @@ fun LightMeterScreen(
                 bodyId = body.id,
                 lensId = lens.id,
                 allowAdaptedLenses = allowAdaptedLenses,
+                meteringSourceName = meteringSource.name,
                 stopModeName = stopMode.name,
                 selectedIso = selectedIso,
                 selectedAperture = selectedAperture,
                 calibrationOffset = calibrationOffset,
             )
         )
+    }
+
+    LaunchedEffect(meteringSource) {
+        viewModel.setMeteringSource(meteringSource)
+    }
+
+    LaunchedEffect(hasCameraPermission) {
+        viewModel.setCameraPermissionGranted(hasCameraPermission)
+    }
+
+    LaunchedEffect(calibrationOffset) {
+        viewModel.setCalibrationOffset(calibrationOffset)
     }
 
     LaunchedEffect(apertureOptions, selectedAperture) {
@@ -141,7 +171,10 @@ fun LightMeterScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> viewModel.startMetering()
+                Lifecycle.Event.ON_RESUME -> {
+                    hasCameraPermission = isCameraPermissionGranted(context)
+                    viewModel.startMetering()
+                }
                 Lifecycle.Event.ON_PAUSE -> viewModel.stopMetering()
                 else -> Unit
             }
@@ -153,17 +186,36 @@ fun LightMeterScreen(
         }
     }
 
-    val sensorSummary = when {
-        !meteringState.sensorAvailable -> "Ambient light sensor not found on this device."
-        !meteringState.isMetering -> "Metering is paused."
-        meteringState.lux == null -> "Ambient light sensor active. Waiting for the first reading."
-        else -> String.format(Locale.getDefault(), "Ambient light: %.0f lux", meteringState.lux)
+    val readingDetailLabel = when (meteringState.selectedSource) {
+        MeteringSource.AMBIENT_SENSOR -> "Ambient light"
+        MeteringSource.CAMERA_REFLECTIVE -> "Phone auto exposure"
+    }
+    val readingDetailText = when (meteringState.selectedSource) {
+        MeteringSource.AMBIENT_SENSOR -> {
+            meteringState.lux?.let { String.format(Locale.getDefault(), "%.0f lux", it) } ?: "--"
+        }
+        MeteringSource.CAMERA_REFLECTIVE -> {
+            meteringState.cameraReading?.let(::formatCameraExposureSummary) ?: "--"
+        }
+    }
+    val sourceSummary = when (meteringState.selectedSource) {
+        MeteringSource.AMBIENT_SENSOR -> when {
+            !meteringState.sensorAvailable -> "Ambient light sensor not found on this device."
+            !meteringState.isMetering -> "Ambient light sensor paused."
+            meteringState.lux == null -> "Ambient light sensor active. Waiting for the first reading."
+            else -> "Incident-style reading from the ambient light sensor."
+        }
+        MeteringSource.CAMERA_REFLECTIVE -> when {
+            !meteringState.cameraAvailable -> "Back camera not available on this device."
+            !meteringState.cameraPermissionGranted -> "Camera permission is required for reflective metering."
+            meteringState.cameraReading == null -> "Back camera active. Waiting for auto exposure data."
+            else -> "Reflective reading from the back camera auto exposure."
+        }
     }
 
     val shutterSpeed = viewModel.calculateShutterSpeed(aperture, iso, meteringState.ev)
     val shutterText = formatSuggestedShutter(shutterSpeed, stopMode, body)
     val evText = meteringState.ev?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--"
-    val luxText = meteringState.lux?.let { String.format(Locale.getDefault(), "%.0f lux", it) } ?: "--"
 
     Column(
         modifier = modifier
@@ -178,16 +230,40 @@ fun LightMeterScreen(
             style = MaterialTheme.typography.headlineLarge
         )
 
+        MeteringSourceCard(
+            selectedSource = meteringSource,
+            cameraAvailable = meteringState.cameraAvailable,
+            onSourceSelected = { meteringSourceName = it.name },
+        )
+
         MeterSummaryCard(
+            meteringSource = meteringState.selectedSource,
             evText = evText,
-            luxText = luxText,
+            readingDetailLabel = readingDetailLabel,
+            readingDetailText = readingDetailText,
             shutterText = shutterText,
-            sensorSummary = sensorSummary,
+            sourceSummary = sourceSummary,
             body = body,
             lens = lens,
             stopMode = stopMode,
-            sensorAvailable = meteringState.sensorAvailable,
+            statusIsError = when (meteringState.selectedSource) {
+                MeteringSource.AMBIENT_SENSOR -> !meteringState.sensorAvailable
+                MeteringSource.CAMERA_REFLECTIVE -> !meteringState.cameraAvailable || !meteringState.cameraPermissionGranted
+            },
         )
+
+        if (meteringSource == MeteringSource.CAMERA_REFLECTIVE) {
+            CameraMeterCard(
+                cameraAvailable = meteringState.cameraAvailable,
+                cameraPermissionGranted = hasCameraPermission,
+                cameraReading = meteringState.cameraReading,
+                onRequestPermission = {
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                },
+                onExposureSample = viewModel::updateCameraReading,
+                onCameraMeteringStopped = viewModel::onCameraMeteringStopped,
+            )
+        }
 
         GearSelectionCard(
             bodyCategoryFilter = bodyCategoryFilter,
@@ -238,10 +314,7 @@ fun LightMeterScreen(
             Text("Calibration Offset: ${String.format(Locale.getDefault(), "%+.1f EV", calibrationOffset)}")
             Slider(
                 value = calibrationOffset,
-                onValueChange = {
-                    calibrationOffset = it
-                    viewModel.setCalibrationOffset(it)
-                },
+                onValueChange = { calibrationOffset = it },
                 valueRange = -3f..3f,
                 modifier = Modifier.width(200.dp)
             )
@@ -250,15 +323,63 @@ fun LightMeterScreen(
 }
 
 @Composable
+private fun MeteringSourceCard(
+    selectedSource: MeteringSource,
+    cameraAvailable: Boolean,
+    onSourceSelected: (MeteringSource) -> Unit,
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Metering source",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "Use the ambient sensor for incident-style readings or switch to reflective metering through the phone camera.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MeteringSource.entries.forEach { source ->
+                    FilterChip(
+                        selected = source == selectedSource,
+                        onClick = { onSourceSelected(source) },
+                        enabled = source != MeteringSource.CAMERA_REFLECTIVE || cameraAvailable,
+                        label = { Text(source.label) },
+                    )
+                }
+            }
+            if (!cameraAvailable) {
+                Text(
+                    text = "Reflective camera metering is disabled because this device does not report a usable camera.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MeterSummaryCard(
+    meteringSource: MeteringSource,
     evText: String,
-    luxText: String,
+    readingDetailLabel: String,
+    readingDetailText: String,
     shutterText: String,
-    sensorSummary: String,
+    sourceSummary: String,
     body: CameraBodyProfile,
     lens: LensProfile,
     stopMode: ExposureStopMode,
-    sensorAvailable: Boolean,
+    statusIsError: Boolean,
 ) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -272,7 +393,7 @@ private fun MeterSummaryCard(
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = "Ambient light sensor source. Reflective camera metering is not enabled yet.",
+                text = meteringSource.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -296,25 +417,82 @@ private fun MeterSummaryCard(
                     modifier = Modifier.weight(1f),
                 )
                 SummaryMetric(
-                    label = "Ambient light",
-                    value = luxText,
+                    label = readingDetailLabel,
+                    value = readingDetailText,
                     modifier = Modifier.weight(1f),
                 )
             }
             Text(
-                text = sensorSummary,
+                text = sourceSummary,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (sensorAvailable) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
+                color = if (statusIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = "${body.category.label} setup: ${body.label} with ${lens.label} using ${stopMode.label.lowercase(Locale.getDefault())} steps.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun CameraMeterCard(
+    cameraAvailable: Boolean,
+    cameraPermissionGranted: Boolean,
+    cameraReading: ReflectiveMeterReading?,
+    onRequestPermission: () -> Unit,
+    onExposureSample: (aperture: Float, shutterSeconds: Double, iso: Int) -> Unit,
+    onCameraMeteringStopped: () -> Unit,
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Reflective meter",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            when {
+                !cameraAvailable -> {
+                    Text(
+                        text = "This device does not expose a usable back camera for reflective metering.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                !cameraPermissionGranted -> {
+                    Text(
+                        text = "Point the phone at the subject and let the app read the back camera's live auto exposure. Camera access is required first.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    FilledTonalButton(onClick = onRequestPermission) {
+                        Text("Allow camera access")
+                    }
+                }
+
+                else -> {
+                    Text(
+                        text = cameraReading?.let {
+                            "Phone camera AE: ${formatCameraExposureSummary(it)}"
+                        } ?: "Point the phone at the subject. The meter is waiting for the first auto exposure sample.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    CameraMeterPreview(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        onExposureSample = onExposureSample,
+                        onCameraMeteringStopped = onCameraMeteringStopped,
+                    )
+                }
+            }
         }
     }
 }
@@ -712,6 +890,36 @@ private fun formatDuration(seconds: Double): String {
         remainderSeconds == 0 -> String.format(Locale.getDefault(), "%d min", minutes)
         else -> String.format(Locale.getDefault(), "%d min %d s", minutes, remainderSeconds)
     }
+}
+
+private fun formatCameraExposureSummary(reading: ReflectiveMeterReading): String {
+    return "f/${formatDecimal(reading.aperture.toDouble())}  ${formatExposureTime(reading.shutterSeconds)}  ISO ${reading.iso}"
+}
+
+private fun formatExposureTime(seconds: Double): String {
+    if (seconds <= 0.0) return "--"
+    if (seconds >= 1.0) {
+        return if (seconds >= 10.0 || abs(seconds - seconds.roundToInt()) < 0.05) {
+            String.format(Locale.getDefault(), "%d s", seconds.roundToInt())
+        } else {
+            String.format(Locale.getDefault(), "%.1f s", seconds)
+        }
+    }
+
+    val denominator = (1.0 / seconds).roundToInt().coerceAtLeast(1)
+    return "1/$denominator s"
+}
+
+private fun formatDecimal(value: Double): String {
+    return if (abs(value - value.roundToInt()) < 0.05) {
+        value.roundToInt().toString()
+    } else {
+        String.format(Locale.getDefault(), "%.1f", value)
+    }
+}
+
+private fun isCameraPermissionGranted(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 }
 
 private fun <T : Number> nearestExposureIndex(
