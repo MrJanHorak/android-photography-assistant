@@ -22,6 +22,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -49,6 +50,12 @@ import kotlin.math.abs
 import kotlin.math.log2
 import kotlin.math.roundToInt
 
+private enum class BodyCategoryFilter(val label: String, val category: CameraBodyCategory?) {
+    ALL("All bodies", null),
+    DIGITAL("Digital", CameraBodyCategory.DIGITAL),
+    MANUAL_FILM("Manual / film", CameraBodyCategory.MANUAL_FILM),
+}
+
 @Composable
 fun LightMeterScreen(
     modifier: Modifier = Modifier,
@@ -63,12 +70,23 @@ fun LightMeterScreen(
     var bodyId by rememberSaveable { mutableStateOf(savedGearSelection?.bodyId ?: cameraBodyProfiles.first().id) }
     var lensId by rememberSaveable { mutableStateOf(savedGearSelection?.lensId ?: lensProfiles.first().id) }
     var allowAdaptedLenses by rememberSaveable { mutableStateOf(savedGearSelection?.allowAdaptedLenses ?: false) }
-    var stopModeName by rememberSaveable { mutableStateOf(ExposureStopMode.FULL.name) }
-    var selectedAperture by rememberSaveable { mutableFloatStateOf(2.8f) }
-    var selectedIso by rememberSaveable { mutableIntStateOf(100) }
-    var calibrationOffset by rememberSaveable { mutableFloatStateOf(0f) }
+    var bodyCategoryFilterName by rememberSaveable { mutableStateOf(BodyCategoryFilter.ALL.name) }
+    var stopModeName by rememberSaveable { mutableStateOf(savedGearSelection?.stopModeName ?: ExposureStopMode.FULL.name) }
+    var selectedAperture by rememberSaveable { mutableFloatStateOf(savedGearSelection?.selectedAperture ?: 2.8f) }
+    var selectedIso by rememberSaveable { mutableIntStateOf(savedGearSelection?.selectedIso ?: 100) }
+    var calibrationOffset by rememberSaveable { mutableFloatStateOf(savedGearSelection?.calibrationOffset ?: 0f) }
 
-    val body = remember(bodyId) { cameraBodyProfiles.firstOrNull { it.id == bodyId } ?: cameraBodyProfiles.first() }
+    val bodyCategoryFilter = remember(bodyCategoryFilterName) { BodyCategoryFilter.valueOf(bodyCategoryFilterName) }
+    val availableBodies = remember(bodyCategoryFilter) {
+        bodyCategoryFilter.category?.let { category ->
+            cameraBodyProfiles.filter { profile -> profile.category == category }
+        } ?: cameraBodyProfiles
+    }
+    val body = remember(bodyId, availableBodies) {
+        availableBodies.firstOrNull { it.id == bodyId }
+            ?: cameraBodyProfiles.firstOrNull { it.id == bodyId }
+            ?: availableBodies.first()
+    }
     val stopMode = remember(stopModeName) { ExposureStopMode.valueOf(stopModeName) }
     val compatibleLenses = remember(body, allowAdaptedLenses) { compatibleLensProfiles(body, allowAdaptedLenses) }
     val lens = remember(lensId, compatibleLenses) {
@@ -83,12 +101,22 @@ fun LightMeterScreen(
         }
     }
 
-    LaunchedEffect(body.id, lens.id, allowAdaptedLenses) {
+    LaunchedEffect(bodyCategoryFilter, body.id) {
+        if (bodyCategoryFilter.category != null && body.category != bodyCategoryFilter.category) {
+            bodyId = availableBodies.first().id
+        }
+    }
+
+    LaunchedEffect(body.id, lens.id, allowAdaptedLenses, stopMode.name, selectedIso, selectedAperture, calibrationOffset) {
         gearPreferences.save(
             SavedGearSelection(
                 bodyId = body.id,
                 lensId = lens.id,
                 allowAdaptedLenses = allowAdaptedLenses,
+                stopModeName = stopMode.name,
+                selectedIso = selectedIso,
+                selectedAperture = selectedAperture,
+                calibrationOffset = calibrationOffset,
             )
         )
     }
@@ -134,6 +162,8 @@ fun LightMeterScreen(
 
     val shutterSpeed = viewModel.calculateShutterSpeed(aperture, iso, meteringState.ev)
     val shutterText = formatSuggestedShutter(shutterSpeed, stopMode, body)
+    val evText = meteringState.ev?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--"
+    val luxText = meteringState.lux?.let { String.format(Locale.getDefault(), "%.0f lux", it) } ?: "--"
 
     Column(
         modifier = modifier
@@ -147,44 +177,26 @@ fun LightMeterScreen(
             text = "Light Meter",
             style = MaterialTheme.typography.headlineLarge
         )
-        Text(
-            text = "Source: ambient light sensor only. Camera metering is not enabled yet.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = sensorSummary,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (meteringState.sensorAvailable) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.error
-            },
-        )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Measured EV: ${meteringState.ev?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--"}",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Text(
-            text = "Suggested Shutter: $shutterText",
-            style = MaterialTheme.typography.titleLarge
-        )
-        Text(
-            text = "Using ${body.label} with ${lens.label} and ${stopMode.label.lowercase(Locale.getDefault())} exposure steps.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        MeterSummaryCard(
+            evText = evText,
+            luxText = luxText,
+            shutterText = shutterText,
+            sensorSummary = sensorSummary,
+            body = body,
+            lens = lens,
+            stopMode = stopMode,
+            sensorAvailable = meteringState.sensorAvailable,
         )
 
         GearSelectionCard(
+            bodyCategoryFilter = bodyCategoryFilter,
             body = body,
             lens = lens,
+            availableBodies = availableBodies,
             allowAdaptedLenses = allowAdaptedLenses,
             compatibleLenses = compatibleLenses,
+            onBodyCategoryFilterSelected = { bodyCategoryFilterName = it.name },
             onBodySelected = { bodyId = it.id },
             onLensSelected = { lensId = it.id },
             onAllowAdaptedLensesChanged = { allowAdaptedLenses = it },
@@ -210,7 +222,7 @@ fun LightMeterScreen(
         ExposureStepControl(
             label = "ISO",
             value = isoOptions[isoIndex].label,
-            supportingText = "Available on ${body.label}. ${stopMode.isoDescription}",
+            supportingText = "Available on ${body.label}. ${body.meteringWorkflowNote} ${stopMode.isoDescription}",
             previousLabel = "Lower",
             nextLabel = "Higher",
             canGoPrevious = isoIndex > 0,
@@ -238,11 +250,114 @@ fun LightMeterScreen(
 }
 
 @Composable
-private fun GearSelectionCard(
+private fun MeterSummaryCard(
+    evText: String,
+    luxText: String,
+    shutterText: String,
+    sensorSummary: String,
     body: CameraBodyProfile,
     lens: LensProfile,
+    stopMode: ExposureStopMode,
+    sensorAvailable: Boolean,
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Meter Summary",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "Ambient light sensor source. Reflective camera metering is not enabled yet.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = evText,
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = "Measured EV",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SummaryMetric(
+                    label = "Suggested shutter",
+                    value = shutterText,
+                    modifier = Modifier.weight(1f),
+                )
+                SummaryMetric(
+                    label = "Ambient light",
+                    value = luxText,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = sensorSummary,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (sensorAvailable) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+            )
+            Text(
+                text = "${body.category.label} setup: ${body.label} with ${lens.label} using ${stopMode.label.lowercase(Locale.getDefault())} steps.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SummaryMetric(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GearSelectionCard(
+    bodyCategoryFilter: BodyCategoryFilter,
+    body: CameraBodyProfile,
+    lens: LensProfile,
+    availableBodies: List<CameraBodyProfile>,
     allowAdaptedLenses: Boolean,
     compatibleLenses: List<LensProfile>,
+    onBodyCategoryFilterSelected: (BodyCategoryFilter) -> Unit,
     onBodySelected: (CameraBodyProfile) -> Unit,
     onLensSelected: (LensProfile) -> Unit,
     onAllowAdaptedLensesChanged: (Boolean) -> Unit,
@@ -263,6 +378,10 @@ private fun GearSelectionCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            BodyCategoryFilterSelector(
+                selectedFilter = bodyCategoryFilter,
+                onFilterSelected = onBodyCategoryFilterSelected,
+            )
             if (body.adaptedCompatibleMounts.isNotEmpty()) {
                 AdapterModeSelector(
                     allowAdaptedLenses = allowAdaptedLenses,
@@ -273,10 +392,11 @@ private fun GearSelectionCard(
             SelectionDropdownField(
                 label = "Camera body",
                 selectedText = body.label,
-                supportingText = "${body.description} Native mounts: ${body.nativeCompatibilitySummary}.",
-                options = cameraBodyProfiles,
+                supportingText = "${body.description} ${body.category.label}. Native mounts: ${body.nativeCompatibilitySummary}. ${body.meteringWorkflowNote}",
+                options = availableBodies,
                 optionLabel = { profile -> profile.label },
                 onSelected = onBodySelected,
+                emptyResultsText = "No camera bodies match that search.",
             )
             SelectionDropdownField(
                 label = "Lens",
@@ -306,6 +426,36 @@ private fun GearSelectionCard(
                 onSelected = onLensSelected,
                 emptyResultsText = "No matching lenses for that search.",
             )
+        }
+    }
+}
+
+@Composable
+private fun BodyCategoryFilterSelector(
+    selectedFilter: BodyCategoryFilter,
+    onFilterSelected: (BodyCategoryFilter) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Body type",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = "Digital bodies suit modern camera workflows. Manual and film bodies keep the same meter but frame ISO as film speed.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            BodyCategoryFilter.entries.forEach { filter ->
+                FilterChip(
+                    selected = filter == selectedFilter,
+                    onClick = { onFilterSelected(filter) },
+                    label = { Text(filter.label) },
+                )
+            }
         }
     }
 }
