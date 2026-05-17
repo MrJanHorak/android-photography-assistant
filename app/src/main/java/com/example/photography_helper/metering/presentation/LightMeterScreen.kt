@@ -208,6 +208,7 @@ fun LightMeterScreen(
     var gearCatalog by remember(context) { mutableStateOf(GearCatalogLoader.load(context)) }
     var catalogStatusMessage by remember(context) { mutableStateOf<String?>(null) }
     var catalogStatusIsError by remember(context) { mutableStateOf(false) }
+    var pendingCatalogImportPreview by remember(context) { mutableStateOf<GearCatalogImportPreview?>(null) }
     val allBodies = gearCatalog.cameraBodyProfiles
     val allLenses = gearCatalog.lensProfiles
     val gearPreferences = remember(context) { GearSelectionPreferences(context) }
@@ -225,15 +226,16 @@ fun LightMeterScreen(
         onResult = { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
 
-            GearCatalogLoader.importFromUri(context, uri)
-                .onSuccess { importedCatalog ->
-                    gearCatalog = importedCatalog
+            GearCatalogLoader.previewImportFromUri(context, uri)
+                .onSuccess { preview ->
+                    pendingCatalogImportPreview = preview
                     catalogStatusIsError = false
-                    catalogStatusMessage = "Imported custom gear JSON and merged it over the bundled catalog by id."
+                    catalogStatusMessage = null
                 }
                 .onFailure { throwable ->
+                    pendingCatalogImportPreview = null
                     catalogStatusIsError = true
-                    catalogStatusMessage = throwable.message ?: "Unable to import the selected JSON catalog."
+                    catalogStatusMessage = throwable.message ?: "Unable to preview the selected JSON catalog."
                 }
         },
     )
@@ -517,12 +519,34 @@ fun LightMeterScreen(
         CatalogManagementCard(
             gearCatalog = gearCatalog,
             hasImportedCatalog = GearCatalogLoader.hasImportedCatalog(context),
+            importPreview = pendingCatalogImportPreview,
             statusMessage = catalogStatusMessage,
             statusIsError = catalogStatusIsError,
             onImportCatalog = {
                 catalogImportLauncher.launch(arrayOf("application/json", "text/*"))
             },
+            onApplyCatalogImport = {
+                pendingCatalogImportPreview?.let { preview ->
+                    runCatching { GearCatalogLoader.applyImportPreview(context, preview) }
+                        .onSuccess { importedCatalog ->
+                            gearCatalog = importedCatalog
+                            pendingCatalogImportPreview = null
+                            catalogStatusIsError = false
+                            catalogStatusMessage = buildCatalogImportSuccessMessage(preview)
+                        }
+                        .onFailure { throwable ->
+                            catalogStatusIsError = true
+                            catalogStatusMessage = throwable.message ?: "Unable to apply the selected JSON catalog."
+                        }
+                }
+            },
+            onDismissCatalogImportPreview = {
+                pendingCatalogImportPreview = null
+                catalogStatusIsError = false
+                catalogStatusMessage = "Import preview dismissed."
+            },
             onResetCatalog = {
+                pendingCatalogImportPreview = null
                 gearCatalog = GearCatalogLoader.clearImportedCatalog(context)
                 catalogStatusIsError = false
                 catalogStatusMessage = "Restored the bundled gear catalog."
@@ -609,9 +633,12 @@ fun LightMeterScreen(
 private fun CatalogManagementCard(
     gearCatalog: GearCatalog,
     hasImportedCatalog: Boolean,
+    importPreview: GearCatalogImportPreview?,
     statusMessage: String?,
     statusIsError: Boolean,
     onImportCatalog: () -> Unit,
+    onApplyCatalogImport: () -> Unit,
+    onDismissCatalogImportPreview: () -> Unit,
     onResetCatalog: () -> Unit,
 ) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -653,6 +680,13 @@ private fun CatalogManagementCard(
                     Text("Reset to bundled")
                 }
             }
+            importPreview?.let { preview ->
+                CatalogImportPreview(
+                    preview = preview,
+                    onApplyCatalogImport = onApplyCatalogImport,
+                    onDismissCatalogImportPreview = onDismissCatalogImportPreview,
+                )
+            }
             statusMessage?.let { message ->
                 Text(
                     text = message,
@@ -662,6 +696,100 @@ private fun CatalogManagementCard(
             }
         }
     }
+}
+
+@Composable
+private fun CatalogImportPreview(
+    preview: GearCatalogImportPreview,
+    onApplyCatalogImport: () -> Unit,
+    onDismissCatalogImportPreview: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "Pending import",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = "Result: ${preview.mergedCatalog.cameraBodyProfiles.size} bodies and ${preview.mergedCatalog.lensProfiles.size} lenses after merging over the bundled catalog.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = formatCatalogChangeLine("Bodies", preview.cameraBodyChanges),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = formatCatalogChangeLine("Lenses", preview.lensChanges),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "Applying this replaces any current imported catalog override file.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            FilledTonalButton(
+                onClick = onApplyCatalogImport,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Apply import")
+            }
+            OutlinedButton(
+                onClick = onDismissCatalogImportPreview,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Dismiss")
+            }
+        }
+    }
+}
+
+private fun formatCatalogChangeLine(
+    collectionLabel: String,
+    changes: GearCatalogImportChanges,
+): String {
+    val pieces = buildList {
+        if (changes.addedLabels.isNotEmpty()) {
+            add("${changes.addedCount} added (${formatCatalogPreviewNames(changes.addedLabels)})")
+        }
+        if (changes.overriddenLabels.isNotEmpty()) {
+            add("${changes.overriddenCount} overridden (${formatCatalogPreviewNames(changes.overriddenLabels)})")
+        }
+    }
+    return if (pieces.isEmpty()) {
+        "$collectionLabel: no entries in this import."
+    } else {
+        "$collectionLabel: ${pieces.joinToString("; ")}"
+    }
+}
+
+private fun formatCatalogPreviewNames(labels: List<String>): String {
+    val visibleLabels = labels.take(3)
+    val remainingCount = labels.size - visibleLabels.size
+    return buildString {
+        append(visibleLabels.joinToString())
+        if (remainingCount > 0) {
+            append(", +")
+            append(remainingCount)
+            append(" more")
+        }
+    }
+}
+
+private fun buildCatalogImportSuccessMessage(preview: GearCatalogImportPreview): String {
+    return "Applied custom gear JSON: " +
+        "${preview.cameraBodyChanges.addedCount} bodies added, " +
+        "${preview.cameraBodyChanges.overriddenCount} bodies overridden; " +
+        "${preview.lensChanges.addedCount} lenses added, " +
+        "${preview.lensChanges.overriddenCount} lenses overridden."
 }
 
 @Composable
