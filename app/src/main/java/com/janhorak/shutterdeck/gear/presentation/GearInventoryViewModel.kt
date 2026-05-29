@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.janhorak.shutterdeck.core.data.db.GearBatteryDao
 import com.janhorak.shutterdeck.core.data.db.GearBatteryEntity
+import com.janhorak.shutterdeck.core.data.db.GearFilterDao
+import com.janhorak.shutterdeck.core.data.db.GearFilterEntity
 import com.janhorak.shutterdeck.core.data.db.GearKitDao
 import com.janhorak.shutterdeck.core.data.db.GearKitEntity
 import com.janhorak.shutterdeck.core.data.db.GearKitItemEntity
@@ -60,10 +62,23 @@ data class MemoryCardSummary(
     val linkedItemLabel: String,
 )
 
+data class GearFilterSummary(
+    val filter: GearFilterEntity,
+    val normalizedThreadKey: String?,
+    val compatibleLensLabels: List<String>,
+)
+
+data class LensThreadCompatibilitySummary(
+    val lens: GearItemEntity,
+    val normalizedThreadKey: String?,
+    val compatibleFilterLabels: List<String>,
+)
+
 @HiltViewModel
 class GearInventoryViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val gearItemDao: GearItemDao,
+    private val gearFilterDao: GearFilterDao,
     private val gearBatteryDao: GearBatteryDao,
     private val gearMemoryCardDao: GearMemoryCardDao,
     private val gearKitDao: GearKitDao,
@@ -75,6 +90,69 @@ class GearInventoryViewModel @Inject constructor(
 
     val items: StateFlow<List<GearItemEntity>> = gearItemDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val filters: StateFlow<List<GearFilterSummary>> = combine(
+        items,
+        gearFilterDao.observeAll(),
+    ) { inventoryItems, filters ->
+        val lenses = inventoryItems
+            .filter { it.category == "Lens" }
+            .map { lens ->
+                lens to normalizeThreadSize(lens.filterThreadSizeText)
+            }
+        filters.map { filter ->
+            val filterKey = normalizeThreadSize(filter.threadSizeText)
+            val compatibleLensLabels = if (filterKey == null) {
+                emptyList()
+            } else {
+                lenses
+                    .filter { (_, lensKey) -> lensKey == filterKey }
+                    .map { (lens, _) -> gearDisplayName(lens) }
+                    .sortedBy { it.lowercase() }
+            }
+            GearFilterSummary(
+                filter = filter,
+                normalizedThreadKey = filterKey,
+                compatibleLensLabels = compatibleLensLabels,
+            )
+        }.sortedWith(
+            compareBy<GearFilterSummary> { it.normalizedThreadKey == null }
+                .thenBy { it.compatibleLensLabels.isNotEmpty() }
+                .thenBy { filterTypeRank(it.filter.filterType) }
+                .thenBy { it.filter.label.lowercase() },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val lensThreadCompatibility: StateFlow<List<LensThreadCompatibilitySummary>> = combine(
+        items,
+        gearFilterDao.observeAll(),
+    ) { inventoryItems, filters ->
+        val filterSummaries = filters
+            .map { filter -> filter to normalizeThreadSize(filter.threadSizeText) }
+        inventoryItems
+            .filter { it.category == "Lens" }
+            .map { lens ->
+                val lensKey = normalizeThreadSize(lens.filterThreadSizeText)
+                val compatibleFilterLabels = if (lensKey == null) {
+                    emptyList()
+                } else {
+                    filterSummaries
+                        .filter { (_, filterKey) -> filterKey == lensKey }
+                        .map { (filter, _) -> filterLabel(filter) }
+                        .sortedBy { it.lowercase() }
+                }
+                LensThreadCompatibilitySummary(
+                    lens = lens,
+                    normalizedThreadKey = lensKey,
+                    compatibleFilterLabels = compatibleFilterLabels,
+                )
+            }
+            .sortedWith(
+                compareBy<LensThreadCompatibilitySummary> { it.normalizedThreadKey == null }
+                    .thenBy { it.compatibleFilterLabels.isNotEmpty() }
+                    .thenBy { gearDisplayName(it.lens).lowercase() },
+            )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val batteries: StateFlow<List<GearBatterySummary>> = combine(
         items,
@@ -168,6 +246,7 @@ class GearInventoryViewModel @Inject constructor(
         brand: String,
         model: String,
         catalogId: String?,
+        filterThreadSizeText: String,
         serialNumber: String,
         purchaseDateText: String,
         purchasePrice: Double?,
@@ -185,6 +264,7 @@ class GearInventoryViewModel @Inject constructor(
                     brand = brand.trim(),
                     model = trimmedModel,
                     catalogId = catalogId,
+                    filterThreadSizeText = filterThreadSizeText.trim(),
                     serialNumber = serialNumber.trim(),
                     purchaseDateText = purchaseDateText.trim(),
                     purchasePrice = purchasePrice,
@@ -198,6 +278,34 @@ class GearInventoryViewModel @Inject constructor(
 
     fun delete(item: GearItemEntity) {
         viewModelScope.launch { gearItemDao.delete(item) }
+    }
+
+    fun saveFilter(
+        id: Long,
+        label: String,
+        filterType: String,
+        threadSizeText: String,
+        strengthText: String,
+        notes: String,
+    ) {
+        val trimmedLabel = label.trim()
+        if (trimmedLabel.isEmpty()) return
+        viewModelScope.launch {
+            gearFilterDao.upsert(
+                GearFilterEntity(
+                    id = id,
+                    label = trimmedLabel,
+                    filterType = filterType.ifBlank { filterTypeOptions.first() },
+                    threadSizeText = threadSizeText.trim(),
+                    strengthText = strengthText.trim(),
+                    notes = notes.trim(),
+                ),
+            )
+        }
+    }
+
+    fun deleteFilter(item: GearFilterEntity) {
+        viewModelScope.launch { gearFilterDao.delete(item) }
     }
 
     fun saveBattery(
@@ -364,6 +472,7 @@ private fun bodySeed(profile: CameraBodyProfile): GearItemEntity {
         brand = brand,
         model = model,
         catalogId = "body:${profile.id}",
+        filterThreadSizeText = "",
         serialNumber = "",
         purchaseDateText = "",
         purchasePrice = null,
@@ -387,6 +496,7 @@ private fun lensSeed(profile: LensProfile): GearItemEntity {
         brand = brand,
         model = model,
         catalogId = "lens:${profile.id}",
+        filterThreadSizeText = "",
         serialNumber = "",
         purchaseDateText = "",
         purchasePrice = null,
@@ -410,8 +520,17 @@ private fun inventoryKey(item: GearItemEntity): String =
 
 private fun formatOneDecimal(value: Double): String = "%.1f".format(value)
 
+private fun filterLabel(filter: GearFilterEntity): String =
+    listOf(filter.label.trim(), filter.strengthText.trim())
+        .filter { it.isNotBlank() }
+        .joinToString(" · ")
+        .ifBlank { filter.label }
+
+private val filterTypeOrder = filterTypeOptions.withIndex().associate { it.value to it.index }
 private val batteryStatusOrder = batteryStatusOptions.withIndex().associate { it.value to it.index }
 private val memoryCardStatusOrder = memoryCardStatusOptions.withIndex().associate { it.value to it.index }
+
+private fun filterTypeRank(type: String): Int = filterTypeOrder[type] ?: filterTypeOrder.size
 
 private fun batteryStatusRank(status: String): Int = batteryStatusOrder[status] ?: batteryStatusOrder.size
 

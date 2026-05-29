@@ -21,19 +21,20 @@ later phases depend on the Phase 0 foundation.
 **Status:** Phase 0 (foundation) ✅, Phase 2 (all 11 calculators C1–C11) ✅,
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅.
 The **Tools** grid is now sectioned for scanability, and the **Gear** tab has Room-backed
-inventory, catalog seeding, battery/card tracking, packing kits and maintenance logs.
+inventory, catalog seeding, filter/thread tracking, battery/card tracking, packing kits and
+maintenance logs.
 **14 tools** live across the **Tools** grid + **Planner** hub.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v7) + DataStore,
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v8) + DataStore,
   CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **74 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **78 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Gear is still incomplete** — inventory CRUD, catalog seeding, battery/card tracking,
-   packing kits and maintenance logs exist, but filter/thread tracking plus photos and richer
-   metadata are still missing.
+1. **Gear is still incomplete** — inventory CRUD, catalog seeding, filter/thread tracking,
+   battery/card tracking, packing kits and maintenance logs exist, but photos, richer metadata,
+   and longer-tail inventory workflows (loans, exports) are still missing.
 2. **Light-meter business logic** still partly in `LightMeterScreen.kt` (not fully in domain).
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
@@ -192,7 +193,11 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   `GearMemoryCardEntity` with nullable `linkedGearItemId`, capacity/health/charge fields,
   last-charged / last-checked dates for batteries, card type/speed/last-formatted fields for
   memory cards, plus Gear-tab editors, summaries and status workflow chips.
-- **[G4] Filter & thread-size tracker.** Which filters fit which lenses (thread mm).
+- **[G4] Filter & thread-size tracker. ✅** Lenses now store a free-form
+  `filterThreadSizeText`; filters live in `GearFilterEntity` / `GearFilterDao`; the Gear tab
+  exposes filter CRUD plus a compatibility section that matches saved filters to saved lenses
+  via blank-safe normalized thread-size keys (so `67`, `67mm`, `67 mm`, and `100mm system`
+  behave predictably without false blank-to-blank matches).
 - **[G5] Packing / kit lists with weight. ✅** Build named kits; total weight for travel;
   checklists you tick before leaving. Room-backed in the Gear tab via `GearKitEntity` +
   `GearKitItemEntity` + `GearKitDao`, surfaced in `GearInventoryScreen`.
@@ -277,8 +282,8 @@ Quick reference grab-bag to pull future tasks from:
 1. ~~**Phase 0 (F1–F6)** — foundation.~~ ✅ DONE
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
-4. **NEXT → Finish Phase 4 Gear**: filter/thread tracking, then photo/richer metadata support
-   to turn the Gear tab into the real \"track everything\" backbone.
+4. **NEXT → Finish Phase 4 Gear**: photo/richer metadata, then loan/rental + insurance/export
+   support to turn the Gear tab into the real \"track everything\" backbone.
 5. **Phase 1 meter polish** (move remaining `LightMeterScreen.kt` logic into `domain`).
 6. **Phase 5 film suite** — strong differentiator if you shoot film.
 7. **Phase 6/7** — business + on-shoot utilities as the app matures.

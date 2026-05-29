@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.janhorak.shutterdeck.core.data.db.AppDatabase
 import com.janhorak.shutterdeck.core.data.db.GearBatteryDao
+import com.janhorak.shutterdeck.core.data.db.GearFilterDao
 import com.janhorak.shutterdeck.core.data.db.GearKitDao
 import com.janhorak.shutterdeck.core.data.db.GearItemDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
@@ -51,6 +52,9 @@ object CoreDataModule {
 
     @Provides
     fun provideGearItemDao(database: AppDatabase): GearItemDao = database.gearItemDao()
+
+    @Provides
+    fun provideGearFilterDao(database: AppDatabase): GearFilterDao = database.gearFilterDao()
 
     @Provides
     fun provideGearBatteryDao(database: AppDatabase): GearBatteryDao = database.gearBatteryDao()

@@ -5,6 +5,15 @@ import java.util.Locale
 
 internal const val UNASSIGNED_GEAR_LABEL = "Unassigned"
 
+internal val filterTypeOptions = listOf(
+    "ND",
+    "CPL",
+    "UV / protection",
+    "Mist / diffusion",
+    "Color / creative",
+    "IR / specialty",
+    "Other",
+)
 internal val batteryStatusOptions = listOf("Ready", "Charging", "Needs charge", "Retired")
 internal val memoryCardStatusOptions = listOf("Empty", "In use", "Full", "Backed up", "Needs format")
 internal val memoryCardTypeOptions = listOf("SD", "microSD", "CFexpress A", "CFexpress B", "CFast", "XQD", "Other")
@@ -30,4 +39,26 @@ internal fun formatStorageCapacityGb(value: Long): String = when {
     value >= 1024L && value % 1024L == 0L -> String.format(Locale.US, "%,d TB", value / 1024L)
     value >= 1024L -> String.format(Locale.US, "%.1f TB", value / 1024.0)
     else -> String.format(Locale.US, "%,d GB", value)
+}
+
+internal fun normalizeThreadSize(text: String): String? {
+    val trimmed = text.trim().lowercase(Locale.US)
+    if (trimmed.isBlank()) return null
+
+    val compact = trimmed.replace(" ", "")
+    val numericKey = Regex("""\d+""").find(compact)?.value
+    return numericKey ?: compact
+}
+
+internal fun formatThreadSizeText(text: String): String {
+    val trimmed = text.trim()
+    if (trimmed.isBlank()) return ""
+
+    val normalized = normalizeThreadSize(trimmed)
+    return when {
+        normalized == null -> ""
+        trimmed.any { it.isLetter() } -> trimmed
+        normalized.all { it.isDigit() } -> "$normalized mm"
+        else -> trimmed
+    }
 }

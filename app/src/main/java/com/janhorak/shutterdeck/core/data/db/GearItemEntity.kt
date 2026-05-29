@@ -16,6 +16,7 @@ data class GearItemEntity(
     val brand: String,
     val model: String,
     val catalogId: String? = null,
+    val filterThreadSizeText: String = "",
     val serialNumber: String,
     val purchaseDateText: String,
     val purchasePrice: Double?,

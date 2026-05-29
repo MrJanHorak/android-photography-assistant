@@ -48,6 +48,8 @@ fun GearInventoryScreen(
     viewModel: GearInventoryViewModel = hiltViewModel(),
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val lensThreadCompatibility by viewModel.lensThreadCompatibility.collectAsStateWithLifecycle()
     val batteries by viewModel.batteries.collectAsStateWithLifecycle()
     val memoryCards by viewModel.memoryCards.collectAsStateWithLifecycle()
     val kits by viewModel.kits.collectAsStateWithLifecycle()
@@ -55,6 +57,8 @@ fun GearInventoryScreen(
     val seedStatus by viewModel.seedStatus.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<GearItemEntity?>(null) }
     var showEditor by remember { mutableStateOf(false) }
+    var editingFilter by remember { mutableStateOf<GearFilterSummary?>(null) }
+    var showFilterEditor by remember { mutableStateOf(false) }
     var editingBattery by remember { mutableStateOf<GearBatterySummary?>(null) }
     var showBatteryEditor by remember { mutableStateOf(false) }
     var editingMemoryCard by remember { mutableStateOf<MemoryCardSummary?>(null) }
@@ -68,6 +72,14 @@ fun GearInventoryScreen(
     val lensCount = items.count { it.category == "Lens" }
     val accessoryCount = items.count { it.category == "Accessory" }
     val catalogLinkedCount = items.count { it.catalogId != null }
+    val lensesWithThreadSizeCount = lensThreadCompatibility.count { it.normalizedThreadKey != null }
+    val lensesWithoutThreadSizeCount = lensThreadCompatibility.count { it.normalizedThreadKey == null }
+    val lensesWithoutMatchingFiltersCount = lensThreadCompatibility.count {
+        it.normalizedThreadKey != null && it.compatibleFilterLabels.isEmpty()
+    }
+    val filtersWithoutMatchingLensesCount = filters.count {
+        it.normalizedThreadKey != null && it.compatibleLensLabels.isEmpty()
+    }
     val readyBatteryCount = batteries.count { it.battery.status == "Ready" }
     val needsChargeBatteryCount = batteries.count { it.battery.status == "Needs charge" }
     val emptyCardCount = memoryCards.count { it.card.status == "Empty" }
@@ -77,10 +89,55 @@ fun GearInventoryScreen(
     val totalBatteryCapacity = batteries.sumOf { it.battery.capacityMah?.toLong() ?: 0L }
     val totalCardCapacity = memoryCards.sumOf { it.card.capacityGb?.toLong() ?: 0L }
     val hasAnyTrackedData = items.isNotEmpty() ||
+        filters.isNotEmpty() ||
         batteries.isNotEmpty() ||
         memoryCards.isNotEmpty() ||
         kits.isNotEmpty() ||
         maintenanceEntries.isNotEmpty()
+    val closeAllEditors = {
+        editing = null
+        showEditor = false
+        editingFilter = null
+        showFilterEditor = false
+        editingBattery = null
+        showBatteryEditor = false
+        editingMemoryCard = null
+        showMemoryCardEditor = false
+        editingKit = null
+        showKitEditor = false
+        editingMaintenance = null
+        showMaintenanceEditor = false
+    }
+    val openGearEditor: (GearItemEntity?) -> Unit = { item ->
+        closeAllEditors()
+        editing = item
+        showEditor = true
+    }
+    val openFilterEditor: (GearFilterSummary?) -> Unit = { filter ->
+        closeAllEditors()
+        editingFilter = filter
+        showFilterEditor = true
+    }
+    val openBatteryEditor: (GearBatterySummary?) -> Unit = { battery ->
+        closeAllEditors()
+        editingBattery = battery
+        showBatteryEditor = true
+    }
+    val openMemoryCardEditor: (MemoryCardSummary?) -> Unit = { card ->
+        closeAllEditors()
+        editingMemoryCard = card
+        showMemoryCardEditor = true
+    }
+    val openKitEditor: (GearKitSummary?) -> Unit = { kit ->
+        closeAllEditors()
+        editingKit = kit
+        showKitEditor = true
+    }
+    val openMaintenanceEditor: (GearMaintenanceEntrySummary?) -> Unit = { entry ->
+        closeAllEditors()
+        editingMaintenance = entry
+        showMaintenanceEditor = true
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -90,7 +147,7 @@ fun GearInventoryScreen(
         item {
             SectionHeader(
                 title = "Gear inventory",
-                subtitle = "Track bodies, lenses, batteries, cards, kits and maintenance in one place.",
+                subtitle = "Track bodies, lenses, filters, batteries, cards, kits and maintenance in one place.",
             )
         }
         item {
@@ -113,21 +170,7 @@ fun GearInventoryScreen(
         }
         item {
             OutlinedButton(
-                onClick = {
-                    val nextState = !showEditor
-                    editing = null
-                    showEditor = nextState
-                    if (nextState) {
-                        editingBattery = null
-                        showBatteryEditor = false
-                        editingMemoryCard = null
-                        showMemoryCardEditor = false
-                        editingKit = null
-                        showKitEditor = false
-                        editingMaintenance = null
-                        showMaintenanceEditor = false
-                    }
-                },
+                onClick = { openGearEditor(null) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
@@ -136,21 +179,16 @@ fun GearInventoryScreen(
         }
         item {
             OutlinedButton(
-                onClick = {
-                    val nextState = !showBatteryEditor
-                    editingBattery = null
-                    showBatteryEditor = nextState
-                    if (nextState) {
-                        editing = null
-                        showEditor = false
-                        editingMemoryCard = null
-                        showMemoryCardEditor = false
-                        editingKit = null
-                        showKitEditor = false
-                        editingMaintenance = null
-                        showMaintenanceEditor = false
-                    }
-                },
+                onClick = { openFilterEditor(null) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text("  Add filter")
+            }
+        }
+        item {
+            OutlinedButton(
+                onClick = { openBatteryEditor(null) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
@@ -159,21 +197,7 @@ fun GearInventoryScreen(
         }
         item {
             OutlinedButton(
-                onClick = {
-                    val nextState = !showMemoryCardEditor
-                    editingMemoryCard = null
-                    showMemoryCardEditor = nextState
-                    if (nextState) {
-                        editing = null
-                        showEditor = false
-                        editingBattery = null
-                        showBatteryEditor = false
-                        editingKit = null
-                        showKitEditor = false
-                        editingMaintenance = null
-                        showMaintenanceEditor = false
-                    }
-                },
+                onClick = { openMemoryCardEditor(null) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
@@ -182,21 +206,7 @@ fun GearInventoryScreen(
         }
         item {
             OutlinedButton(
-                onClick = {
-                    val nextState = !showKitEditor
-                    editingKit = null
-                    showKitEditor = nextState
-                    if (nextState) {
-                        editing = null
-                        showEditor = false
-                        editingBattery = null
-                        showBatteryEditor = false
-                        editingMemoryCard = null
-                        showMemoryCardEditor = false
-                        editingMaintenance = null
-                        showMaintenanceEditor = false
-                    }
-                },
+                onClick = { openKitEditor(null) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = items.isNotEmpty(),
             ) {
@@ -206,21 +216,7 @@ fun GearInventoryScreen(
         }
         item {
             OutlinedButton(
-                onClick = {
-                    val nextState = !showMaintenanceEditor
-                    editingMaintenance = null
-                    showMaintenanceEditor = nextState
-                    if (nextState) {
-                        editing = null
-                        showEditor = false
-                        editingBattery = null
-                        showBatteryEditor = false
-                        editingMemoryCard = null
-                        showMemoryCardEditor = false
-                        editingKit = null
-                        showKitEditor = false
-                    }
-                },
+                onClick = { openMaintenanceEditor(null) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = items.isNotEmpty(),
             ) {
@@ -232,13 +228,14 @@ fun GearInventoryScreen(
             item {
                 GearEditorCard(
                     initial = editing,
-                    onSave = { id, category, brand, model, catalogId, serial, purchaseDate, purchasePrice, currentValue, weightGrams, notes ->
+                    onSave = { id, category, brand, model, catalogId, filterThreadSizeText, serial, purchaseDate, purchasePrice, currentValue, weightGrams, notes ->
                         viewModel.save(
                             id = id,
                             category = category,
                             brand = brand,
                             model = model,
                             catalogId = catalogId,
+                            filterThreadSizeText = filterThreadSizeText,
                             serialNumber = serial,
                             purchaseDateText = purchaseDate,
                             purchasePrice = purchasePrice,
@@ -246,13 +243,28 @@ fun GearInventoryScreen(
                             weightGrams = weightGrams,
                             notes = notes,
                         )
-                        editing = null
-                        showEditor = false
+                        closeAllEditors()
                     },
-                    onCancel = {
-                        editing = null
-                        showEditor = false
+                    onCancel = closeAllEditors,
+                )
+            }
+        }
+        if (showFilterEditor) {
+            item {
+                FilterEditorCard(
+                    initial = editingFilter,
+                    onSave = { id, label, filterType, threadSizeText, strengthText, notes ->
+                        viewModel.saveFilter(
+                            id = id,
+                            label = label,
+                            filterType = filterType,
+                            threadSizeText = threadSizeText,
+                            strengthText = strengthText,
+                            notes = notes,
+                        )
+                        closeAllEditors()
                     },
+                    onCancel = closeAllEditors,
                 )
             }
         }
@@ -274,13 +286,9 @@ fun GearInventoryScreen(
                             lastCheckedText = lastCheckedText,
                             notes = notes,
                         )
-                        editingBattery = null
-                        showBatteryEditor = false
+                        closeAllEditors()
                     },
-                    onCancel = {
-                        editingBattery = null
-                        showBatteryEditor = false
-                    },
+                    onCancel = closeAllEditors,
                 )
             }
         }
@@ -301,13 +309,9 @@ fun GearInventoryScreen(
                             lastFormattedText = lastFormattedText,
                             notes = notes,
                         )
-                        editingMemoryCard = null
-                        showMemoryCardEditor = false
+                        closeAllEditors()
                     },
-                    onCancel = {
-                        editingMemoryCard = null
-                        showMemoryCardEditor = false
-                    },
+                    onCancel = closeAllEditors,
                 )
             }
         }
@@ -323,13 +327,9 @@ fun GearInventoryScreen(
                             notes = notes,
                             gearItemIds = selectedIds,
                         )
-                        editingKit = null
-                        showKitEditor = false
+                        closeAllEditors()
                     },
-                    onCancel = {
-                        editingKit = null
-                        showKitEditor = false
-                    },
+                    onCancel = closeAllEditors,
                 )
             }
         }
@@ -347,13 +347,9 @@ fun GearInventoryScreen(
                             shutterCount = shutterCount,
                             notes = notes,
                         )
-                        editingMaintenance = null
-                        showMaintenanceEditor = false
+                        closeAllEditors()
                     },
-                    onCancel = {
-                        editingMaintenance = null
-                        showMaintenanceEditor = false
-                    },
+                    onCancel = closeAllEditors,
                 )
             }
         }
@@ -366,6 +362,11 @@ fun GearInventoryScreen(
                         ResultRow("Lenses", lensCount.toString())
                         ResultRow("Accessories", accessoryCount.toString())
                         ResultRow("Catalog-linked", catalogLinkedCount.toString())
+                        ResultRow("Filters", filters.size.toString())
+                        ResultRow("Lenses with thread size", lensesWithThreadSizeCount.toString())
+                        ResultRow("Lenses missing thread size", lensesWithoutThreadSizeCount.toString())
+                        ResultRow("Lenses without filters", lensesWithoutMatchingFiltersCount.toString())
+                        ResultRow("Filters without lenses", filtersWithoutMatchingLensesCount.toString())
                         ResultRow("Batteries", batteries.size.toString())
                         ResultRow("Ready batteries", readyBatteryCount.toString())
                         ResultRow("Needs charge", needsChargeBatteryCount.toString())
@@ -390,6 +391,49 @@ fun GearInventoryScreen(
         }
         item {
             SectionHeader(
+                title = "Filters & fit",
+                subtitle = "Track each filter you own and match it against saved lens thread sizes.",
+            )
+        }
+        if (filters.isEmpty()) {
+            item {
+                Text(
+                    text = "No filters yet. Save your ND, CPL, UV or diffusion filters here and ShutterDeck will match them to your lenses by thread size.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        items(filters, key = { it.filter.id }) { filter ->
+            FilterCard(
+                summary = filter,
+                onEdit = { openFilterEditor(filter) },
+                onDelete = { viewModel.deleteFilter(filter.filter) },
+            )
+        }
+        item {
+            SectionHeader(
+                title = "Lens thread compatibility",
+                subtitle = "See which saved lenses still need a thread size and which ones already have matching filters.",
+            )
+        }
+        if (lensThreadCompatibility.isEmpty()) {
+            item {
+                Text(
+                    text = "No lenses yet. Save a lens first, then add its filter thread size so ShutterDeck can show what fits.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        items(lensThreadCompatibility, key = { it.lens.id }) { lens ->
+            LensThreadCompatibilityCard(
+                summary = lens,
+                onEdit = { openGearEditor(lens.lens) },
+            )
+        }
+        item {
+            SectionHeader(
                 title = "Batteries & power",
                 subtitle = "Track spare packs, health, charge state and the last time each one was topped up or checked.",
             )
@@ -406,18 +450,7 @@ fun GearInventoryScreen(
         items(batteries, key = { it.battery.id }) { battery ->
             BatteryCard(
                 summary = battery,
-                onEdit = {
-                    editingBattery = battery
-                    showBatteryEditor = true
-                    editing = null
-                    showEditor = false
-                    editingMemoryCard = null
-                    showMemoryCardEditor = false
-                    editingKit = null
-                    showKitEditor = false
-                    editingMaintenance = null
-                    showMaintenanceEditor = false
-                },
+                onEdit = { openBatteryEditor(battery) },
                 onDelete = { viewModel.deleteBattery(battery.battery) },
             )
         }
@@ -439,18 +472,7 @@ fun GearInventoryScreen(
         items(memoryCards, key = { it.card.id }) { card ->
             MemoryCardCard(
                 summary = card,
-                onEdit = {
-                    editingMemoryCard = card
-                    showMemoryCardEditor = true
-                    editing = null
-                    showEditor = false
-                    editingBattery = null
-                    showBatteryEditor = false
-                    editingKit = null
-                    showKitEditor = false
-                    editingMaintenance = null
-                    showMaintenanceEditor = false
-                },
+                onEdit = { openMemoryCardEditor(card) },
                 onDelete = { viewModel.deleteMemoryCard(card.card) },
             )
         }
@@ -481,18 +503,7 @@ fun GearInventoryScreen(
         items(kits, key = { it.kit.id }) { kit ->
             GearKitCard(
                 kit = kit,
-                onEdit = {
-                    editingKit = kit
-                    showKitEditor = true
-                    editing = null
-                    showEditor = false
-                    editingBattery = null
-                    showBatteryEditor = false
-                    editingMemoryCard = null
-                    showMemoryCardEditor = false
-                    editingMaintenance = null
-                    showMaintenanceEditor = false
-                },
+                onEdit = { openKitEditor(kit) },
                 onDelete = { viewModel.deleteKit(kit.kit) },
                 onTogglePacked = { viewModel.togglePacked(it) },
             )
@@ -524,18 +535,7 @@ fun GearInventoryScreen(
         items(maintenanceEntries, key = { it.entry.id }) { entry ->
             MaintenanceEntryCard(
                 entry = entry,
-                onEdit = {
-                    editingMaintenance = entry
-                    showMaintenanceEditor = true
-                    editing = null
-                    showEditor = false
-                    editingBattery = null
-                    showBatteryEditor = false
-                    editingMemoryCard = null
-                    showMemoryCardEditor = false
-                    editingKit = null
-                    showKitEditor = false
-                },
+                onEdit = { openMaintenanceEditor(entry) },
                 onDelete = { viewModel.deleteMaintenance(entry.entry) },
             )
         }
@@ -557,18 +557,7 @@ fun GearInventoryScreen(
         items(items, key = { it.id }) { item ->
             GearItemCard(
                 item = item,
-                onEdit = {
-                    editing = item
-                    showEditor = true
-                    editingBattery = null
-                    showBatteryEditor = false
-                    editingMemoryCard = null
-                    showMemoryCardEditor = false
-                    editingKit = null
-                    showKitEditor = false
-                    editingMaintenance = null
-                    showMaintenanceEditor = false
-                },
+                onEdit = { openGearEditor(item) },
                 onDelete = { viewModel.delete(item) },
             )
         }
@@ -815,6 +804,7 @@ private fun GearEditorCard(
         brand: String,
         model: String,
         catalogId: String?,
+        filterThreadSizeText: String,
         serial: String,
         purchaseDate: String,
         purchasePrice: Double?,
@@ -827,6 +817,7 @@ private fun GearEditorCard(
     var category by remember(initial?.id) { mutableStateOf(initial?.category ?: gearCategories.last()) }
     var brand by remember(initial?.id) { mutableStateOf(initial?.brand ?: "") }
     var model by remember(initial?.id) { mutableStateOf(initial?.model ?: "") }
+    var filterThreadSizeText by remember(initial?.id) { mutableStateOf(initial?.filterThreadSizeText ?: "") }
     var serial by remember(initial?.id) { mutableStateOf(initial?.serialNumber ?: "") }
     var purchaseDate by remember(initial?.id) { mutableStateOf(initial?.purchaseDateText ?: "") }
     var purchasePrice by remember(initial?.id) { mutableStateOf(initial?.purchasePrice?.toString() ?: "") }
@@ -884,6 +875,19 @@ private fun GearEditorCard(
                     keyboardType = KeyboardType.Text,
                 )
             }
+            if (category == "Lens") {
+                LabeledField(
+                    label = "Filter thread size",
+                    value = filterThreadSizeText,
+                    onValueChange = { filterThreadSizeText = it },
+                    keyboardType = KeyboardType.Text,
+                )
+                Text(
+                    text = "Examples: 67, 67mm, 82 mm or 100mm system",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LabeledField(
                     label = "Purchase price",
@@ -932,6 +936,7 @@ private fun GearEditorCard(
                             brand,
                             model,
                             initial?.catalogId,
+                            if (category == "Lens") filterThreadSizeText else "",
                             serial,
                             purchaseDate,
                             purchasePrice.toDoubleOrNull(),
@@ -1095,6 +1100,9 @@ private fun GearItemCard(
             }
             val detailLine = buildList {
                 if (item.catalogId != null) add("Meter catalog")
+                if (item.category == "Lens" && item.filterThreadSizeText.isNotBlank()) {
+                    add("Thread ${formatThreadSizeText(item.filterThreadSizeText)}")
+                }
                 if (item.purchaseDateText.isNotBlank()) add("Bought ${item.purchaseDateText}")
                 item.currentValue?.let { add("Value ${formatMoney(it)}") }
                 item.weightGrams?.let { add(formatWeight(it)) }
