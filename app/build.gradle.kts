@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.photography_helper"
+    namespace = "com.janhorak.shutterdeck"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.photography_helper"
+        applicationId = "com.janhorak.shutterdeck"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -41,6 +41,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -51,7 +52,14 @@ dependencies {
     // Hilt For DI
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.navigation.compose)
     ksp(libs.hilt.compiler)
+
+    // Persistence
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.datastore.preferences)
     
     // CameraX
     implementation(libs.camerax.core)
