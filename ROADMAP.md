@@ -21,20 +21,20 @@ later phases depend on the Phase 0 foundation.
 **Status:** Phase 0 (foundation) ✅, Phase 2 (all 11 calculators C1–C11) ✅,
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅.
 The **Tools** grid is now sectioned for scanability, and the **Gear** tab has Room-backed
-inventory, catalog seeding, filter/thread tracking, battery/card tracking, packing kits and
-maintenance logs.
+inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
+battery/card tracking, packing kits and maintenance logs.
 **14 tools** live across the **Tools** grid + **Planner** hub.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v8) + DataStore,
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v9) + DataStore,
   CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **78 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **80 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Gear is still incomplete** — inventory CRUD, catalog seeding, filter/thread tracking,
-   battery/card tracking, packing kits and maintenance logs exist, but photos, richer metadata,
-   and longer-tail inventory workflows (loans, exports) are still missing.
+1. **Gear is still incomplete** — inventory CRUD, catalog seeding, richer metadata/reference-photo
+   attachments, filter/thread tracking, battery/card tracking, packing kits and maintenance logs
+   exist, but longer-tail inventory workflows (loans, exports) are still missing.
 2. **Light-meter business logic** still partly in `LightMeterScreen.kt` (not fully in domain).
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
@@ -180,12 +180,14 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
 
 ### Phase 4 — Gear management (P2; Room-backed inventory)
 
-- **[G1] Gear inventory. 🚧 foundation landed** Bodies, lenses, accessories: model, serial,
+- **[G1] Gear inventory. ✅ richer metadata landed** Bodies, lenses, accessories: model, serial,
   purchase date/price, current value, photos, notes. **Done now:** Room CRUD for category,
   brand/model, serial, purchase date, purchase price, current value, weight and notes in the
-  Gear tab, plus one-tap seeding from the current metering catalog with duplicate avoidance.
-  Imported rows keep a nullable `catalogId` and the seed step also skips manual brand/model
-  matches already in inventory. **Remaining:** photos and richer metadata.
+  Gear tab, plus one-tap seeding from the current metering catalog with duplicate avoidance,
+  richer metadata fields (`conditionLabel`, `storageLocation`, `purchaseSource`), and a
+  lightweight persisted `referencePhotoUri` attachment with replace/clear support. Imported rows
+  keep a nullable `catalogId` and the seed step also skips manual brand/model matches already in
+  inventory. **Remaining:** richer loan/rental/export workflows and optional future photo preview UX.
 - **[G2] Maintenance & firmware log. ✅** Sensor cleanings, repairs, firmware versions,
   shutter count tracking. Room-backed in the Gear tab via `GearMaintenanceEntryEntity` +
   `GearMaintenanceDao`, with event type, date, notes and optional shutter-count checkpoints.

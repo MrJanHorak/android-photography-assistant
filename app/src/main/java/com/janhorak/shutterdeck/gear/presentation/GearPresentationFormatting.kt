@@ -1,10 +1,19 @@
 package com.janhorak.shutterdeck.gear.presentation
 
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 internal const val UNASSIGNED_GEAR_LABEL = "Unassigned"
 
+internal val gearConditionOptions = listOf(
+    "Excellent",
+    "Good",
+    "Fair",
+    "Needs service",
+    "Retired",
+)
 internal val filterTypeOptions = listOf(
     "ND",
     "CPL",
@@ -61,4 +70,16 @@ internal fun formatThreadSizeText(text: String): String {
         normalized.all { it.isDigit() } -> "$normalized mm"
         else -> trimmed
     }
+}
+
+internal fun referencePhotoLabel(uriString: String): String {
+    val trimmed = uriString.trim()
+    if (trimmed.isBlank()) return ""
+
+    val encodedLabel = trimmed
+        .substringBefore('?')
+        .substringAfterLast('/')
+        .ifBlank { trimmed }
+
+    return URLDecoder.decode(encodedLabel, StandardCharsets.UTF_8)
 }

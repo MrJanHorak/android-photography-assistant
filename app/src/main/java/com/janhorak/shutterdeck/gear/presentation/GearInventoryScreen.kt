@@ -1,5 +1,7 @@
 package com.janhorak.shutterdeck.gear.presentation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -55,8 +58,10 @@ fun GearInventoryScreen(
     val kits by viewModel.kits.collectAsStateWithLifecycle()
     val maintenanceEntries by viewModel.maintenanceEntries.collectAsStateWithLifecycle()
     val seedStatus by viewModel.seedStatus.collectAsStateWithLifecycle()
-    var editing by remember { mutableStateOf<GearItemEntity?>(null) }
-    var showEditor by remember { mutableStateOf(false) }
+    val inventoryStatus by viewModel.inventoryStatus.collectAsStateWithLifecycle()
+    var editingGearId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showEditor by rememberSaveable { mutableStateOf(false) }
+    var editingReferencePhotoUri by rememberSaveable { mutableStateOf("") }
     var editingFilter by remember { mutableStateOf<GearFilterSummary?>(null) }
     var showFilterEditor by remember { mutableStateOf(false) }
     var editingBattery by remember { mutableStateOf<GearBatterySummary?>(null) }
@@ -67,11 +72,24 @@ fun GearInventoryScreen(
     var showKitEditor by remember { mutableStateOf(false) }
     var editingMaintenance by remember { mutableStateOf<GearMaintenanceEntrySummary?>(null) }
     var showMaintenanceEditor by remember { mutableStateOf(false) }
+    val editing = editingGearId?.let { editingId -> items.firstOrNull { it.id == editingId } }
+    val referencePhotoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            editingReferencePhotoUri = uri.toString()
+        }
+    }
 
     val bodyCount = items.count { it.category == "Body" }
     val lensCount = items.count { it.category == "Lens" }
     val accessoryCount = items.count { it.category == "Accessory" }
     val catalogLinkedCount = items.count { it.catalogId != null }
+    val itemsWithConditionCount = items.count { it.conditionLabel.isNotBlank() }
+    val itemsNeedingServiceCount = items.count { it.conditionLabel == "Needs service" }
+    val itemsWithStorageLocationCount = items.count { it.storageLocation.isNotBlank() }
+    val itemsWithPurchaseSourceCount = items.count { it.purchaseSource.isNotBlank() }
+    val itemsWithReferencePhotoCount = items.count { it.referencePhotoUri.isNotBlank() }
     val lensesWithThreadSizeCount = lensThreadCompatibility.count { it.normalizedThreadKey != null }
     val lensesWithoutThreadSizeCount = lensThreadCompatibility.count { it.normalizedThreadKey == null }
     val lensesWithoutMatchingFiltersCount = lensThreadCompatibility.count {
@@ -95,8 +113,9 @@ fun GearInventoryScreen(
         kits.isNotEmpty() ||
         maintenanceEntries.isNotEmpty()
     val closeAllEditors = {
-        editing = null
+        editingGearId = null
         showEditor = false
+        editingReferencePhotoUri = ""
         editingFilter = null
         showFilterEditor = false
         editingBattery = null
@@ -107,10 +126,12 @@ fun GearInventoryScreen(
         showKitEditor = false
         editingMaintenance = null
         showMaintenanceEditor = false
+        viewModel.clearInventoryStatus()
     }
     val openGearEditor: (GearItemEntity?) -> Unit = { item ->
         closeAllEditors()
-        editing = item
+        editingGearId = item?.id
+        editingReferencePhotoUri = item?.referencePhotoUri.orEmpty()
         showEditor = true
     }
     val openFilterEditor: (GearFilterSummary?) -> Unit = { filter ->
@@ -165,6 +186,15 @@ fun GearInventoryScreen(
                     text = status,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        inventoryStatus?.let { status ->
+            item {
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -228,22 +258,13 @@ fun GearInventoryScreen(
             item {
                 GearEditorCard(
                     initial = editing,
-                    onSave = { id, category, brand, model, catalogId, filterThreadSizeText, serial, purchaseDate, purchasePrice, currentValue, weightGrams, notes ->
-                        viewModel.save(
-                            id = id,
-                            category = category,
-                            brand = brand,
-                            model = model,
-                            catalogId = catalogId,
-                            filterThreadSizeText = filterThreadSizeText,
-                            serialNumber = serial,
-                            purchaseDateText = purchaseDate,
-                            purchasePrice = purchasePrice,
-                            currentValue = currentValue,
-                            weightGrams = weightGrams,
-                            notes = notes,
-                        )
-                        closeAllEditors()
+                    referencePhotoUri = editingReferencePhotoUri,
+                    onPickReferencePhoto = {
+                        referencePhotoPickerLauncher.launch(arrayOf("image/*"))
+                    },
+                    onClearReferencePhoto = { editingReferencePhotoUri = "" },
+                    onSave = { draft ->
+                        viewModel.save(draft) { closeAllEditors() }
                     },
                     onCancel = closeAllEditors,
                 )
@@ -362,6 +383,11 @@ fun GearInventoryScreen(
                         ResultRow("Lenses", lensCount.toString())
                         ResultRow("Accessories", accessoryCount.toString())
                         ResultRow("Catalog-linked", catalogLinkedCount.toString())
+                        ResultRow("Condition saved", itemsWithConditionCount.toString())
+                        ResultRow("Needs service", itemsNeedingServiceCount.toString())
+                        ResultRow("Storage tracked", itemsWithStorageLocationCount.toString())
+                        ResultRow("Purchase source saved", itemsWithPurchaseSourceCount.toString())
+                        ResultRow("Reference photos", itemsWithReferencePhotoCount.toString())
                         ResultRow("Filters", filters.size.toString())
                         ResultRow("Lenses with thread size", lensesWithThreadSizeCount.toString())
                         ResultRow("Lenses missing thread size", lensesWithoutThreadSizeCount.toString())
@@ -798,32 +824,25 @@ private fun GearKitEditorCard(
 @Composable
 private fun GearEditorCard(
     initial: GearItemEntity?,
-    onSave: (
-        id: Long,
-        category: String,
-        brand: String,
-        model: String,
-        catalogId: String?,
-        filterThreadSizeText: String,
-        serial: String,
-        purchaseDate: String,
-        purchasePrice: Double?,
-        currentValue: Double?,
-        weightGrams: Double?,
-        notes: String,
-    ) -> Unit,
+    referencePhotoUri: String,
+    onPickReferencePhoto: () -> Unit,
+    onClearReferencePhoto: () -> Unit,
+    onSave: (GearItemEditState) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var category by remember(initial?.id) { mutableStateOf(initial?.category ?: gearCategories.last()) }
-    var brand by remember(initial?.id) { mutableStateOf(initial?.brand ?: "") }
-    var model by remember(initial?.id) { mutableStateOf(initial?.model ?: "") }
-    var filterThreadSizeText by remember(initial?.id) { mutableStateOf(initial?.filterThreadSizeText ?: "") }
-    var serial by remember(initial?.id) { mutableStateOf(initial?.serialNumber ?: "") }
-    var purchaseDate by remember(initial?.id) { mutableStateOf(initial?.purchaseDateText ?: "") }
-    var purchasePrice by remember(initial?.id) { mutableStateOf(initial?.purchasePrice?.toString() ?: "") }
-    var currentValue by remember(initial?.id) { mutableStateOf(initial?.currentValue?.toString() ?: "") }
-    var weightGrams by remember(initial?.id) { mutableStateOf(initial?.weightGrams?.toString() ?: "") }
-    var notes by remember(initial?.id) { mutableStateOf(initial?.notes ?: "") }
+    var category by rememberSaveable(initial?.id) { mutableStateOf(initial?.category ?: gearCategories.last()) }
+    var brand by rememberSaveable(initial?.id) { mutableStateOf(initial?.brand ?: "") }
+    var model by rememberSaveable(initial?.id) { mutableStateOf(initial?.model ?: "") }
+    var filterThreadSizeText by rememberSaveable(initial?.id) { mutableStateOf(initial?.filterThreadSizeText ?: "") }
+    var conditionLabel by rememberSaveable(initial?.id) { mutableStateOf(initial?.conditionLabel ?: "") }
+    var storageLocation by rememberSaveable(initial?.id) { mutableStateOf(initial?.storageLocation ?: "") }
+    var purchaseSource by rememberSaveable(initial?.id) { mutableStateOf(initial?.purchaseSource ?: "") }
+    var serial by rememberSaveable(initial?.id) { mutableStateOf(initial?.serialNumber ?: "") }
+    var purchaseDate by rememberSaveable(initial?.id) { mutableStateOf(initial?.purchaseDateText ?: "") }
+    var purchasePrice by rememberSaveable(initial?.id) { mutableStateOf(initial?.purchasePrice?.toString() ?: "") }
+    var currentValue by rememberSaveable(initial?.id) { mutableStateOf(initial?.currentValue?.toString() ?: "") }
+    var weightGrams by rememberSaveable(initial?.id) { mutableStateOf(initial?.weightGrams?.toString() ?: "") }
+    var notes by rememberSaveable(initial?.id) { mutableStateOf(initial?.notes ?: "") }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -888,6 +907,77 @@ private fun GearEditorCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Text(
+                text = "Condition",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = conditionLabel.isBlank(),
+                        onClick = { conditionLabel = "" },
+                        label = { Text("Unspecified") },
+                    )
+                }
+                gearConditionOptions.chunked(2).forEach { rowOptions ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rowOptions.forEach { option ->
+                            FilterChip(
+                                selected = conditionLabel == option,
+                                onClick = { conditionLabel = option },
+                                label = { Text(option) },
+                            )
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LabeledField(
+                    label = "Storage location",
+                    value = storageLocation,
+                    onValueChange = { storageLocation = it },
+                    modifier = Modifier.weight(1f),
+                    keyboardType = KeyboardType.Text,
+                )
+                LabeledField(
+                    label = "Purchase source",
+                    value = purchaseSource,
+                    onValueChange = { purchaseSource = it },
+                    modifier = Modifier.weight(1f),
+                    keyboardType = KeyboardType.Text,
+                )
+            }
+            Text(
+                text = "Reference photo",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = if (referencePhotoUri.isBlank()) {
+                    "No reference photo attached yet."
+                } else {
+                    "Attached: ${referencePhotoLabel(referencePhotoUri)}"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onPickReferencePhoto,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(if (referencePhotoUri.isBlank()) "Choose photo" else "Replace photo")
+                }
+                if (referencePhotoUri.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = onClearReferencePhoto,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Clear photo")
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LabeledField(
                     label = "Purchase price",
@@ -931,18 +1021,24 @@ private fun GearEditorCard(
                 OutlinedButton(
                     onClick = {
                         onSave(
-                            initial?.id ?: 0L,
-                            category,
-                            brand,
-                            model,
-                            initial?.catalogId,
-                            if (category == "Lens") filterThreadSizeText else "",
-                            serial,
-                            purchaseDate,
-                            purchasePrice.toDoubleOrNull(),
-                            currentValue.toDoubleOrNull(),
-                            weightGrams.toDoubleOrNull(),
-                            notes,
+                            GearItemEditState(
+                                id = initial?.id ?: 0L,
+                                category = category,
+                                brand = brand,
+                                model = model,
+                                catalogId = initial?.catalogId,
+                                filterThreadSizeText = if (category == "Lens") filterThreadSizeText else "",
+                                conditionLabel = conditionLabel,
+                                storageLocation = storageLocation,
+                                purchaseSource = purchaseSource,
+                                referencePhotoUri = referencePhotoUri,
+                                serialNumber = serial,
+                                purchaseDateText = purchaseDate,
+                                purchasePrice = purchasePrice.toDoubleOrNull(),
+                                currentValue = currentValue.toDoubleOrNull(),
+                                weightGrams = weightGrams.toDoubleOrNull(),
+                                notes = notes,
+                            ),
                         )
                     },
                     modifier = Modifier.weight(1f),
@@ -1110,6 +1206,25 @@ private fun GearItemCard(
             if (detailLine.isNotBlank()) {
                 Text(
                     text = detailLine,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            val metadataLine = buildList {
+                if (item.conditionLabel.isNotBlank()) add(item.conditionLabel)
+                if (item.storageLocation.isNotBlank()) add("Stored ${item.storageLocation}")
+                if (item.purchaseSource.isNotBlank()) add("Source ${item.purchaseSource}")
+            }.joinToString(" · ")
+            if (metadataLine.isNotBlank()) {
+                Text(
+                    text = metadataLine,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (item.referencePhotoUri.isNotBlank()) {
+                Text(
+                    text = "Reference photo: ${referencePhotoLabel(item.referencePhotoUri)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -30,4 +30,18 @@ class GearPresentationFormattingTest {
         assertEquals("reargel", normalizeThreadSize("rear gel"))
         assertEquals("drop-in", normalizeThreadSize("drop-in"))
     }
+
+    @Test
+    fun referencePhotoLabelUsesLastPathSegment() {
+        assertEquals(
+            "image:62",
+            referencePhotoLabel("content://media/external/images/media/image%3A62"),
+        )
+    }
+
+    @Test
+    fun blankReferencePhotoLabelReturnsBlank() {
+        assertEquals("", referencePhotoLabel(""))
+        assertEquals("", referencePhotoLabel("   "))
+    }
 }

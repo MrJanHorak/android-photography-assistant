@@ -1,6 +1,8 @@
 package com.janhorak.shutterdeck.gear.presentation
 
+import android.content.Intent
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.janhorak.shutterdeck.core.data.db.GearBatteryDao
@@ -87,6 +89,8 @@ class GearInventoryViewModel @Inject constructor(
 
     private val _seedStatus = MutableStateFlow<String?>(null)
     val seedStatus: StateFlow<String?> = _seedStatus.asStateFlow()
+    private val _inventoryStatus = MutableStateFlow<String?>(null)
+    val inventoryStatus: StateFlow<String?> = _inventoryStatus.asStateFlow()
 
     val items: StateFlow<List<GearItemEntity>> = gearItemDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -241,43 +245,63 @@ class GearInventoryViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun save(
-        id: Long,
-        category: String,
-        brand: String,
-        model: String,
-        catalogId: String?,
-        filterThreadSizeText: String,
-        serialNumber: String,
-        purchaseDateText: String,
-        purchasePrice: Double?,
-        currentValue: Double?,
-        weightGrams: Double?,
-        notes: String,
+        draft: GearItemEditState,
+        onSuccess: () -> Unit = {},
     ) {
-        val trimmedModel = model.trim()
+        val trimmedModel = draft.model.trim()
         if (trimmedModel.isEmpty()) return
         viewModelScope.launch {
+            val previousReferencePhotoUri = items.value
+                .firstOrNull { it.id == draft.id }
+                ?.referencePhotoUri
+                .orEmpty()
+            if (
+                !updateReferencePhotoGrant(
+                    itemId = draft.id,
+                    previousUriString = previousReferencePhotoUri,
+                    nextUriString = draft.referencePhotoUri,
+                )
+            ) {
+                _inventoryStatus.value = "Couldn't save access to the selected reference photo. Choose it again."
+                return@launch
+            }
             gearItemDao.upsert(
                 GearItemEntity(
-                    id = id,
-                    category = category.ifBlank { "Accessory" },
-                    brand = brand.trim(),
+                    id = draft.id,
+                    category = draft.category.ifBlank { "Accessory" },
+                    brand = draft.brand.trim(),
                     model = trimmedModel,
-                    catalogId = catalogId,
-                    filterThreadSizeText = filterThreadSizeText.trim(),
-                    serialNumber = serialNumber.trim(),
-                    purchaseDateText = purchaseDateText.trim(),
-                    purchasePrice = purchasePrice,
-                    currentValue = currentValue,
-                    weightGrams = weightGrams,
-                    notes = notes.trim(),
+                    catalogId = draft.catalogId,
+                    filterThreadSizeText = draft.filterThreadSizeText.trim(),
+                    conditionLabel = draft.conditionLabel.trim(),
+                    storageLocation = draft.storageLocation.trim(),
+                    purchaseSource = draft.purchaseSource.trim(),
+                    referencePhotoUri = draft.referencePhotoUri.trim(),
+                    serialNumber = draft.serialNumber.trim(),
+                    purchaseDateText = draft.purchaseDateText.trim(),
+                    purchasePrice = draft.purchasePrice,
+                    currentValue = draft.currentValue,
+                    weightGrams = draft.weightGrams,
+                    notes = draft.notes.trim(),
                 ),
             )
+            _inventoryStatus.value = null
+            onSuccess()
         }
     }
 
     fun delete(item: GearItemEntity) {
-        viewModelScope.launch { gearItemDao.delete(item) }
+        viewModelScope.launch {
+            releaseReferencePhotoGrant(
+                uriString = item.referencePhotoUri,
+                excludingItemId = item.id,
+            )
+            gearItemDao.delete(item)
+        }
+    }
+
+    fun clearInventoryStatus() {
+        _inventoryStatus.value = null
     }
 
     fun saveFilter(
@@ -454,6 +478,75 @@ class GearInventoryViewModel @Inject constructor(
             } else {
                 "Added ${missingSeeds.size} item(s) from the ${catalog.source.label.lowercase()}."
             }
+        }
+    }
+
+    private suspend fun updateReferencePhotoGrant(
+        itemId: Long,
+        previousUriString: String,
+        nextUriString: String,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val previous = previousUriString.trim()
+        val next = nextUriString.trim()
+        if (previous == next) return@withContext true
+
+        val resolver = appContext.contentResolver
+        if (next.isNotBlank()) {
+            val nextUri = Uri.parse(next)
+            val alreadyHeld = resolver.persistedUriPermissions.any {
+                it.uri == nextUri && it.isReadPermission
+            }
+            if (!alreadyHeld) {
+                try {
+                    resolver.takePersistableUriPermission(
+                        nextUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                } catch (_: SecurityException) {
+                    return@withContext false
+                }
+            }
+        }
+
+        if (!isReferencePhotoStillUsed(previous, excludingItemId = itemId)) {
+            releasePersistedReadGrant(previous)
+        }
+        true
+    }
+
+    private suspend fun releaseReferencePhotoGrant(
+        uriString: String,
+        excludingItemId: Long,
+    ) {
+        withContext(Dispatchers.IO) {
+            val trimmedUri = uriString.trim()
+            if (!isReferencePhotoStillUsed(trimmedUri, excludingItemId = excludingItemId)) {
+                releasePersistedReadGrant(trimmedUri)
+            }
+        }
+    }
+
+    private fun isReferencePhotoStillUsed(uriString: String, excludingItemId: Long): Boolean {
+        val trimmedUri = uriString.trim()
+        if (trimmedUri.isBlank()) return false
+        return items.value.any { item ->
+            item.id != excludingItemId && item.referencePhotoUri.trim() == trimmedUri
+        }
+    }
+
+    private fun releasePersistedReadGrant(uriString: String) {
+        if (uriString.isBlank()) return
+
+        val resolver = appContext.contentResolver
+        val uri = Uri.parse(uriString)
+        val held = resolver.persistedUriPermissions.any {
+            it.uri == uri && it.isReadPermission
+        }
+        if (held) {
+            resolver.releasePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
         }
     }
 }
