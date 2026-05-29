@@ -7,9 +7,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.janhorak.shutterdeck.core.data.db.AppDatabase
+import com.janhorak.shutterdeck.core.data.db.GearBatteryDao
 import com.janhorak.shutterdeck.core.data.db.GearKitDao
 import com.janhorak.shutterdeck.core.data.db.GearItemDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
+import com.janhorak.shutterdeck.core.data.db.GearMemoryCardDao
 import com.janhorak.shutterdeck.core.data.db.LocationDao
 import com.janhorak.shutterdeck.core.data.db.ScenePresetDao
 import com.janhorak.shutterdeck.core.data.db.ShootDao
@@ -49,6 +51,12 @@ object CoreDataModule {
 
     @Provides
     fun provideGearItemDao(database: AppDatabase): GearItemDao = database.gearItemDao()
+
+    @Provides
+    fun provideGearBatteryDao(database: AppDatabase): GearBatteryDao = database.gearBatteryDao()
+
+    @Provides
+    fun provideGearMemoryCardDao(database: AppDatabase): GearMemoryCardDao = database.gearMemoryCardDao()
 
     @Provides
     fun provideGearKitDao(database: AppDatabase): GearKitDao = database.gearKitDao()

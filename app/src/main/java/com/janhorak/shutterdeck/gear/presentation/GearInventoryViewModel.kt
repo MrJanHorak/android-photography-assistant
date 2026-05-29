@@ -3,6 +3,8 @@ package com.janhorak.shutterdeck.gear.presentation
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.janhorak.shutterdeck.core.data.db.GearBatteryDao
+import com.janhorak.shutterdeck.core.data.db.GearBatteryEntity
 import com.janhorak.shutterdeck.core.data.db.GearKitDao
 import com.janhorak.shutterdeck.core.data.db.GearKitEntity
 import com.janhorak.shutterdeck.core.data.db.GearKitItemEntity
@@ -10,6 +12,8 @@ import com.janhorak.shutterdeck.core.data.db.GearItemDao
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
+import com.janhorak.shutterdeck.core.data.db.GearMemoryCardDao
+import com.janhorak.shutterdeck.core.data.db.GearMemoryCardEntity
 import com.janhorak.shutterdeck.metering.presentation.CameraBodyProfile
 import com.janhorak.shutterdeck.metering.presentation.GearCatalogLoader
 import com.janhorak.shutterdeck.metering.presentation.LensProfile
@@ -46,10 +50,22 @@ data class GearMaintenanceEntrySummary(
     val itemLabel: String,
 )
 
+data class GearBatterySummary(
+    val battery: GearBatteryEntity,
+    val linkedItemLabel: String,
+)
+
+data class MemoryCardSummary(
+    val card: GearMemoryCardEntity,
+    val linkedItemLabel: String,
+)
+
 @HiltViewModel
 class GearInventoryViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val gearItemDao: GearItemDao,
+    private val gearBatteryDao: GearBatteryDao,
+    private val gearMemoryCardDao: GearMemoryCardDao,
     private val gearKitDao: GearKitDao,
     private val gearMaintenanceDao: GearMaintenanceDao,
 ) : ViewModel() {
@@ -59,6 +75,44 @@ class GearInventoryViewModel @Inject constructor(
 
     val items: StateFlow<List<GearItemEntity>> = gearItemDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val batteries: StateFlow<List<GearBatterySummary>> = combine(
+        items,
+        gearBatteryDao.observeAll(),
+    ) { inventoryItems, batteries ->
+        val itemMap = inventoryItems.associateBy { it.id }
+        batteries.map { battery ->
+            GearBatterySummary(
+                battery = battery,
+                linkedItemLabel = battery.linkedGearItemId
+                    ?.let { itemId -> itemMap[itemId]?.let(::gearDisplayName) }
+                    ?: UNASSIGNED_GEAR_LABEL,
+            )
+        }.sortedWith(
+            compareBy<GearBatterySummary> { batteryStatusRank(it.battery.status) }
+                .thenBy { it.linkedItemLabel.lowercase() }
+                .thenBy { it.battery.label.lowercase() },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val memoryCards: StateFlow<List<MemoryCardSummary>> = combine(
+        items,
+        gearMemoryCardDao.observeAll(),
+    ) { inventoryItems, cards ->
+        val itemMap = inventoryItems.associateBy { it.id }
+        cards.map { card ->
+            MemoryCardSummary(
+                card = card,
+                linkedItemLabel = card.linkedGearItemId
+                    ?.let { itemId -> itemMap[itemId]?.let(::gearDisplayName) }
+                    ?: UNASSIGNED_GEAR_LABEL,
+            )
+        }.sortedWith(
+            compareBy<MemoryCardSummary> { memoryCardStatusRank(it.card.status) }
+                .thenBy { it.linkedItemLabel.lowercase() }
+                .thenBy { it.card.label.lowercase() },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val kits: StateFlow<List<GearKitSummary>> = combine(
         items,
@@ -74,7 +128,7 @@ class GearInventoryViewModel @Inject constructor(
                         GearKitItemSummary(
                             entry = entry,
                             itemId = item.id,
-                            itemLabel = displayName(item),
+                            itemLabel = gearDisplayName(item),
                             itemWeightGrams = item.weightGrams,
                         )
                     }
@@ -102,7 +156,7 @@ class GearInventoryViewModel @Inject constructor(
                 GearMaintenanceEntrySummary(
                     entry = entry,
                     itemId = item.id,
-                    itemLabel = displayName(item),
+                    itemLabel = gearDisplayName(item),
                 )
             }
         }
@@ -144,6 +198,76 @@ class GearInventoryViewModel @Inject constructor(
 
     fun delete(item: GearItemEntity) {
         viewModelScope.launch { gearItemDao.delete(item) }
+    }
+
+    fun saveBattery(
+        id: Long,
+        linkedGearItemId: Long?,
+        label: String,
+        capacityMah: Int?,
+        healthPercent: Int?,
+        chargePercent: Int?,
+        status: String,
+        lastChargedText: String,
+        lastCheckedText: String,
+        notes: String,
+    ) {
+        val trimmedLabel = label.trim()
+        if (trimmedLabel.isEmpty()) return
+        viewModelScope.launch {
+            gearBatteryDao.upsert(
+                GearBatteryEntity(
+                    id = id,
+                    linkedGearItemId = linkedGearItemId,
+                    label = trimmedLabel,
+                    capacityMah = capacityMah,
+                    healthPercent = healthPercent,
+                    chargePercent = chargePercent,
+                    status = status.ifBlank { batteryStatusOptions.first() },
+                    lastChargedText = lastChargedText.trim(),
+                    lastCheckedText = lastCheckedText.trim(),
+                    notes = notes.trim(),
+                ),
+            )
+        }
+    }
+
+    fun deleteBattery(item: GearBatteryEntity) {
+        viewModelScope.launch { gearBatteryDao.delete(item) }
+    }
+
+    fun saveMemoryCard(
+        id: Long,
+        linkedGearItemId: Long?,
+        label: String,
+        cardType: String,
+        capacityGb: Int?,
+        speedLabel: String,
+        status: String,
+        lastFormattedText: String,
+        notes: String,
+    ) {
+        val trimmedLabel = label.trim()
+        if (trimmedLabel.isEmpty()) return
+        viewModelScope.launch {
+            gearMemoryCardDao.upsert(
+                GearMemoryCardEntity(
+                    id = id,
+                    linkedGearItemId = linkedGearItemId,
+                    label = trimmedLabel,
+                    cardType = cardType.ifBlank { memoryCardTypeOptions.first() },
+                    capacityGb = capacityGb,
+                    speedLabel = speedLabel.trim(),
+                    status = status.ifBlank { memoryCardStatusOptions.first() },
+                    lastFormattedText = lastFormattedText.trim(),
+                    notes = notes.trim(),
+                ),
+            )
+        }
+    }
+
+    fun deleteMemoryCard(item: GearMemoryCardEntity) {
+        viewModelScope.launch { gearMemoryCardDao.delete(item) }
     }
 
     fun saveKit(
@@ -226,12 +350,6 @@ class GearInventoryViewModel @Inject constructor(
     }
 }
 
-private fun displayName(item: GearItemEntity): String =
-    listOf(item.brand.trim(), item.model.trim())
-        .filter { it.isNotBlank() }
-        .joinToString(" ")
-        .ifBlank { item.model }
-
 private fun bodySeed(profile: CameraBodyProfile): GearItemEntity {
     val (brand, model) = splitCatalogLabel(profile.label)
     val details = buildList {
@@ -291,3 +409,10 @@ private fun inventoryKey(item: GearItemEntity): String =
         .joinToString("|") { it.trim().lowercase() }
 
 private fun formatOneDecimal(value: Double): String = "%.1f".format(value)
+
+private val batteryStatusOrder = batteryStatusOptions.withIndex().associate { it.value to it.index }
+private val memoryCardStatusOrder = memoryCardStatusOptions.withIndex().associate { it.value to it.index }
+
+private fun batteryStatusRank(status: String): Int = batteryStatusOrder[status] ?: batteryStatusOrder.size
+
+private fun memoryCardStatusRank(status: String): Int = memoryCardStatusOrder[status] ?: memoryCardStatusOrder.size
