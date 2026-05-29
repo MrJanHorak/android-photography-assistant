@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Checkbox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -19,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,12 +34,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
+import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.ResultRow
 import com.janhorak.shutterdeck.ui.components.SectionHeader
 import java.util.Locale
 
 private val gearCategories = listOf("Body", "Lens", "Accessory")
+private val maintenanceEventTypes = listOf("Cleaning", "Firmware", "Repair", "Shutter count", "Note")
 
 @Composable
 fun GearInventoryScreen(
@@ -45,8 +49,14 @@ fun GearInventoryScreen(
     viewModel: GearInventoryViewModel = hiltViewModel(),
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
+    val kits by viewModel.kits.collectAsStateWithLifecycle()
+    val maintenanceEntries by viewModel.maintenanceEntries.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<GearItemEntity?>(null) }
     var showEditor by remember { mutableStateOf(false) }
+    var editingKit by remember { mutableStateOf<GearKitSummary?>(null) }
+    var showKitEditor by remember { mutableStateOf(false) }
+    var editingMaintenance by remember { mutableStateOf<GearMaintenanceEntrySummary?>(null) }
+    var showMaintenanceEditor by remember { mutableStateOf(false) }
 
     val bodyCount = items.count { it.category == "Body" }
     val lensCount = items.count { it.category == "Lens" }
@@ -62,7 +72,7 @@ fun GearInventoryScreen(
         item {
             SectionHeader(
                 title = "Gear inventory",
-                subtitle = "Track bodies, lenses and accessories. Packing kits and maintenance logs come next.",
+                subtitle = "Track bodies, lenses, kits and maintenance in one place.",
             )
         }
         item {
@@ -75,6 +85,32 @@ fun GearInventoryScreen(
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Text("  Add gear item")
+            }
+        }
+        item {
+            OutlinedButton(
+                onClick = {
+                    editingKit = null
+                    showKitEditor = !showKitEditor
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = items.isNotEmpty(),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text("  Add packing kit")
+            }
+        }
+        item {
+            OutlinedButton(
+                onClick = {
+                    editingMaintenance = null
+                    showMaintenanceEditor = !showMaintenanceEditor
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = items.isNotEmpty(),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text("  Add maintenance log")
             }
         }
         if (showEditor) {
@@ -104,6 +140,52 @@ fun GearInventoryScreen(
                 )
             }
         }
+        if (showKitEditor) {
+            item {
+                GearKitEditorCard(
+                    initial = editingKit,
+                    availableItems = items,
+                    onSave = { id, name, notes, selectedIds ->
+                        viewModel.saveKit(
+                            id = id,
+                            name = name,
+                            notes = notes,
+                            gearItemIds = selectedIds,
+                        )
+                        editingKit = null
+                        showKitEditor = false
+                    },
+                    onCancel = {
+                        editingKit = null
+                        showKitEditor = false
+                    },
+                )
+            }
+        }
+        if (showMaintenanceEditor) {
+            item {
+                MaintenanceEditorCard(
+                    initial = editingMaintenance,
+                    availableItems = items,
+                    onSave = { id, gearItemId, eventType, dateText, shutterCount, notes ->
+                        viewModel.saveMaintenance(
+                            id = id,
+                            gearItemId = gearItemId,
+                            eventType = eventType,
+                            dateText = dateText,
+                            shutterCount = shutterCount,
+                            notes = notes,
+                        )
+                        editingMaintenance = null
+                        showMaintenanceEditor = false
+                    },
+                    onCancel = {
+                        editingMaintenance = null
+                        showMaintenanceEditor = false
+                    },
+                )
+            }
+        }
         if (items.isNotEmpty()) {
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -112,11 +194,88 @@ fun GearInventoryScreen(
                         ResultRow("Bodies", bodyCount.toString())
                         ResultRow("Lenses", lensCount.toString())
                         ResultRow("Accessories", accessoryCount.toString())
+                        ResultRow("Packing kits", kits.size.toString())
+                        ResultRow("Maintenance logs", maintenanceEntries.size.toString())
                         ResultRow("Est. value", formatMoney(totalValue))
                         ResultRow("Total weight", formatWeight(totalWeight))
                     }
                 }
             }
+        }
+        item {
+            SectionHeader(
+                title = "Packing kits",
+                subtitle = "Build named grab-and-go kits and tick items off before leaving.",
+            )
+        }
+        if (items.isEmpty()) {
+            item {
+                Text(
+                    text = "Add gear items first, then build packing kits from your saved inventory.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (items.isNotEmpty() && kits.isEmpty()) {
+            item {
+                Text(
+                    text = "No kits yet. Create a travel, portrait or everyday carry kit and ShutterDeck will total its weight for you.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        items(kits, key = { it.kit.id }) { kit ->
+            GearKitCard(
+                kit = kit,
+                onEdit = {
+                    editingKit = kit
+                    showKitEditor = true
+                },
+                onDelete = { viewModel.deleteKit(kit.kit) },
+                onTogglePacked = { viewModel.togglePacked(it) },
+            )
+        }
+        item {
+            SectionHeader(
+                title = "Maintenance log",
+                subtitle = "Track cleanings, firmware, repairs and shutter-count updates.",
+            )
+        }
+        if (items.isEmpty()) {
+            item {
+                Text(
+                    text = "Add gear items first, then log maintenance against the items you own.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (items.isNotEmpty() && maintenanceEntries.isEmpty()) {
+            item {
+                Text(
+                    text = "No maintenance entries yet. Log a sensor cleaning, firmware update, repair or shutter-count checkpoint.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        items(maintenanceEntries, key = { it.entry.id }) { entry ->
+            MaintenanceEntryCard(
+                entry = entry,
+                onEdit = {
+                    editingMaintenance = entry
+                    showMaintenanceEditor = true
+                },
+                onDelete = { viewModel.deleteMaintenance(entry.entry) },
+            )
+        }
+        item {
+            SectionHeader(
+                title = "Inventory items",
+                subtitle = "Everything currently tracked in your gear inventory.",
+            )
         }
         if (items.isEmpty()) {
             item {
@@ -136,6 +295,237 @@ fun GearInventoryScreen(
                 },
                 onDelete = { viewModel.delete(item) },
             )
+        }
+    }
+}
+
+@Composable
+private fun MaintenanceEditorCard(
+    initial: GearMaintenanceEntrySummary?,
+    availableItems: List<GearItemEntity>,
+    onSave: (Long, Long, String, String, Long?, String) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var selectedItemId by remember(initial?.entry?.id) {
+        mutableStateOf(initial?.itemId ?: availableItems.firstOrNull()?.id ?: 0L)
+    }
+    var eventType by remember(initial?.entry?.id) {
+        mutableStateOf(initial?.entry?.eventType ?: maintenanceEventTypes.first())
+    }
+    var dateText by remember(initial?.entry?.id) { mutableStateOf(initial?.entry?.dateText ?: "") }
+    var shutterCount by remember(initial?.entry?.id) { mutableStateOf(initial?.entry?.shutterCount?.toString() ?: "") }
+    var notes by remember(initial?.entry?.id) { mutableStateOf(initial?.entry?.notes ?: "") }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = if (initial == null) "Add maintenance log" else "Edit maintenance log",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "Gear item",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            availableItems.forEach { item ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = selectedItemId == item.id,
+                        onClick = { selectedItemId = item.id },
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = displayName(item),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = item.category,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                maintenanceEventTypes.chunked(3).forEach { rowOptions ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rowOptions.forEach { option ->
+                            FilterChip(
+                                selected = eventType == option,
+                                onClick = { eventType = option },
+                                label = { Text(option) },
+                            )
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LabeledField(
+                    label = "Date",
+                    value = dateText,
+                    onValueChange = { dateText = it },
+                    modifier = Modifier.weight(1f),
+                    keyboardType = KeyboardType.Text,
+                )
+                LabeledField(
+                    label = "Shutter count",
+                    value = shutterCount,
+                    onValueChange = { shutterCount = it },
+                    modifier = Modifier.weight(1f),
+                    keyboardType = KeyboardType.Number,
+                )
+            }
+            LabeledField(
+                label = "Notes",
+                value = notes,
+                onValueChange = { notes = it },
+                keyboardType = KeyboardType.Text,
+                singleLine = false,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Cancel")
+                }
+                OutlinedButton(
+                    onClick = {
+                        onSave(
+                            initial?.entry?.id ?: 0L,
+                            selectedItemId,
+                            eventType,
+                            dateText,
+                            shutterCount.toLongOrNull(),
+                            notes,
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = selectedItemId != 0L,
+                ) {
+                    Text(if (initial == null) "Save" else "Update")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GearKitEditorCard(
+    initial: GearKitSummary?,
+    availableItems: List<GearItemEntity>,
+    onSave: (Long, String, String, List<Long>) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var name by remember(initial?.kit?.id) { mutableStateOf(initial?.kit?.name ?: "") }
+    var notes by remember(initial?.kit?.id) { mutableStateOf(initial?.kit?.notes ?: "") }
+    var selectedIds by remember(initial?.kit?.id) {
+        mutableStateOf(initial?.items?.map { it.itemId }?.toSet() ?: emptySet())
+    }
+    val selectedWeight = availableItems
+        .filter { it.id in selectedIds }
+        .sumOf { it.weightGrams ?: 0.0 }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = if (initial == null) "Add packing kit" else "Edit packing kit",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            LabeledField(
+                label = "Kit name",
+                value = name,
+                onValueChange = { name = it },
+                keyboardType = KeyboardType.Text,
+            )
+            LabeledField(
+                label = "Notes",
+                value = notes,
+                onValueChange = { notes = it },
+                keyboardType = KeyboardType.Text,
+                singleLine = false,
+            )
+            Text(
+                text = "Selected items: ${selectedIds.size} · ${formatWeight(selectedWeight)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (availableItems.isEmpty()) {
+                Text(
+                    text = "Add inventory items before creating a packing kit.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                availableItems.forEach { item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = item.id in selectedIds,
+                            onCheckedChange = { checked ->
+                                selectedIds = if (checked) {
+                                    selectedIds + item.id
+                                } else {
+                                    selectedIds - item.id
+                                }
+                            },
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = displayName(item),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = buildList {
+                                    add(item.category)
+                                    item.weightGrams?.let { add(formatWeight(it)) }
+                                }.joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Cancel")
+                }
+                OutlinedButton(
+                    onClick = {
+                        onSave(
+                            initial?.kit?.id ?: 0L,
+                            name,
+                            notes,
+                            selectedIds.toList(),
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = name.isNotBlank() && selectedIds.isNotEmpty(),
+                ) {
+                    Text(if (initial == null) "Save" else "Update")
+                }
+            }
         }
     }
 }
@@ -277,6 +667,112 @@ private fun GearEditorCard(
                 ) {
                     Text(if (initial == null) "Save" else "Update")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GearKitCard(
+    kit: GearKitSummary,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onTogglePacked: (com.janhorak.shutterdeck.core.data.db.GearKitItemEntity) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = kit.kit.name,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = "${kit.packedCount}/${kit.items.size} packed · ${formatWeight(kit.totalWeightGrams)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                }
+            }
+            if (kit.kit.notes.isNotBlank()) {
+                Text(
+                    text = kit.kit.notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            kit.items.forEach { item ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = item.entry.packed,
+                        onCheckedChange = { onTogglePacked(item.entry) },
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.itemLabel,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = item.itemWeightGrams?.let(::formatWeight) ?: "Weight not set",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MaintenanceEntryCard(
+    entry: GearMaintenanceEntrySummary,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${entry.itemLabel} · ${entry.entry.eventType}",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = buildList {
+                            if (entry.entry.dateText.isNotBlank()) add(entry.entry.dateText)
+                            entry.entry.shutterCount?.let { add("Shutter $it") }
+                        }.joinToString(" · ").ifBlank { "Undated entry" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                }
+            }
+            if (entry.entry.notes.isNotBlank()) {
+                Text(
+                    text = entry.entry.notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }
