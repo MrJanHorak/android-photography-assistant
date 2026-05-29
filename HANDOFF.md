@@ -14,9 +14,9 @@ Package root: `com.janhorak.shutterdeck`
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
-**Tools** (home grid), **Planner** (hub), **Gear** (placeholder), **More** (settings/theme).
+**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory foundation), **More** (settings/theme).
 
-**14 working tools** (all reachable from the Tools grid):
+**14 working tools** (all reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**):
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
@@ -26,7 +26,11 @@ ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
 
-**Persistence:** Room DB `shutterdeck.db` (v2) + DataStore (Preferences) for theme/settings.
+**Gear tab** now has a first Room-backed inventory slice: add/edit/delete bodies, lenses and
+accessories with brand/model, serial, purchase date, purchase/current value, weight and notes.
+This is a foundation only — packing kits, maintenance logs, photos and catalog seeding are still TODO.
+
+**Persistence:** Room DB `shutterdeck.db` (v3) + DataStore (Preferences) for theme/settings.
 
 ---
 
@@ -46,7 +50,8 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 - `MainActivity.kt`, `ShutterDeckApp.kt` (`@HiltAndroidApp`), `AppViewModel.kt` (theme).
 - `navigation/` — `Routes`, `TopLevelDestination`, `titleForRoute()` (Destinations.kt);
   `ShutterDeckRoot.kt` (Scaffold + bottom nav + `NavHost`).
-- `home/HomeScreen.kt` — the Tools grid (`tools` list of `ToolEntry`).
+- `home/HomeScreen.kt` — the sectioned Tools grid (`toolSections`).
+- `gear/presentation/` — `GearInventoryScreen`, `GearInventoryViewModel`.
 - `calculators/domain/` — 13 pure calculators incl. `SolarTimes.kt`, `CelestialPosition.kt`.
 - `calculators/presentation/` — one screen per calculator + shared infra:
   `CalculatorScaffold.kt` (CalculatorScaffold/ResultCard/CalculatorHint),
@@ -56,7 +61,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `ShootDetail*` (screens + `@HiltViewModel`s).
 - `metering/` — the original light meter feature (data/domain/di/presentation).
 - `core/data/` — `SettingsRepository`, `CoreDataModule` (Hilt: DataStore + Room + DAOs),
-  `db/` (`AppDatabase`, entities, DAOs).
+  `db/` (`AppDatabase`, entities, DAOs incl. `GearItemEntity` / `GearItemDao`).
 - `ui/components/` — `ToolCard`, `ResultRow`, `SectionHeader`, `LabeledField`,
   `PlaceholderScreen`. `ui/theme/` — color/type/theme incl. NIGHT (red) mode.
 
@@ -151,16 +156,14 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Home grid is getting large (14 tools).** Group the Tools grid into sections
-   (Exposure / Optics / Planning / Output) using a `LazyVerticalGrid` with section headers,
-   or filter chips. Low risk, high UX value. (HomeScreen.kt)
-2. **Phase 4 Gear inventory (G1, G5)** — Room-backed bodies/lenses/accessories + packing
-   lists with weight. Replaces the **Gear** placeholder tab. Seed from the existing gear
-   catalog (`metering/presentation/ExposureCatalog.kt` / `assets/gear_catalog.json`).
-3. **Phase 5 Film suite (FL1/FL2)** — film stock DB + roll/frame logger (Room). Strong
+1. **Finish Phase 4 Gear** — the Gear tab now has CRUD inventory, but the next highest-value
+   steps are: catalog seeding from the existing metering gear models, packing kits with total
+   weight, and maintenance / firmware logs.
+2. **Phase 5 Film suite (FL1/FL2)** — film stock DB + roll/frame logger (Room). Strong
    differentiator; reuses reciprocity from Sunny 16 (C6).
-4. **Polish P3/P4:** link a shoot to a saved location; per-shot gear/notes; map view for
+3. **Polish P3/P4:** link a shoot to a saved location; per-shot gear/notes; map view for
    locations; reference-photo attachments.
+4. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain.
 5. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
    composition overlays on the CameraX preview.
 
@@ -175,6 +178,9 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 ## 9. Known constraints / risks
 - `fallbackToDestructiveMigration(dropAllTables = true)`: bumping the Room `version` deletes
   local data. Acceptable now; add real `Migration`s before shipping to users.
+- Gear inventory is currently **free-form**. Seeding it from the existing metering catalog is
+  deferred because `CameraBodyProfile` / `LensProfile` still live as `internal` models under
+  `metering/presentation`; moving those to a shared package is the clean follow-up.
 - Light meter logic still partly lives in `metering/presentation/LightMeterScreen.kt`
   (large file) rather than fully in `domain`; refactor opportunistically.
 - KMP `shared` module not yet extracted (Phase 8). Keep domain Android-free to make it cheap.

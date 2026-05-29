@@ -34,6 +34,7 @@ import com.janhorak.shutterdeck.calculators.presentation.PrintSizeScreen
 import com.janhorak.shutterdeck.calculators.presentation.Sunny16Screen
 import com.janhorak.shutterdeck.calculators.presentation.SunMoonPositionScreen
 import com.janhorak.shutterdeck.calculators.presentation.SunTimesScreen
+import com.janhorak.shutterdeck.gear.presentation.GearInventoryScreen
 import com.janhorak.shutterdeck.home.HomeScreen
 import com.janhorak.shutterdeck.metering.presentation.LightMeterScreen
 import com.janhorak.shutterdeck.planner.presentation.LocationsScreen
@@ -41,7 +42,6 @@ import com.janhorak.shutterdeck.planner.presentation.PlannerScreen
 import com.janhorak.shutterdeck.planner.presentation.ShootDetailScreen
 import com.janhorak.shutterdeck.planner.presentation.ShootsScreen
 import com.janhorak.shutterdeck.settings.SettingsScreen
-import com.janhorak.shutterdeck.ui.components.PlaceholderScreen
 
 /** Root composable: app bar + bottom navigation hosting the navigation graph. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,10 +161,7 @@ fun ShutterDeckRoot() {
                 ShootDetailScreen()
             }
             composable(Routes.GEAR) {
-                PlaceholderScreen(
-                    title = "Gear",
-                    message = "Inventory, maintenance logs, and packing lists are coming here.",
-                )
+                GearInventoryScreen()
             }
             composable(Routes.MORE) {
                 SettingsScreen()
