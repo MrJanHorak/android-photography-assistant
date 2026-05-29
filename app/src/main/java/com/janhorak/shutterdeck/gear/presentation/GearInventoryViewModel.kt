@@ -1,5 +1,6 @@
 package com.janhorak.shutterdeck.gear.presentation
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.janhorak.shutterdeck.core.data.db.GearKitDao
@@ -9,12 +10,20 @@ import com.janhorak.shutterdeck.core.data.db.GearItemDao
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
+import com.janhorak.shutterdeck.metering.presentation.CameraBodyProfile
+import com.janhorak.shutterdeck.metering.presentation.GearCatalogLoader
+import com.janhorak.shutterdeck.metering.presentation.LensProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class GearKitItemSummary(
@@ -39,10 +48,14 @@ data class GearMaintenanceEntrySummary(
 
 @HiltViewModel
 class GearInventoryViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val gearItemDao: GearItemDao,
     private val gearKitDao: GearKitDao,
     private val gearMaintenanceDao: GearMaintenanceDao,
 ) : ViewModel() {
+
+    private val _seedStatus = MutableStateFlow<String?>(null)
+    val seedStatus: StateFlow<String?> = _seedStatus.asStateFlow()
 
     val items: StateFlow<List<GearItemEntity>> = gearItemDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -100,6 +113,7 @@ class GearInventoryViewModel @Inject constructor(
         category: String,
         brand: String,
         model: String,
+        catalogId: String?,
         serialNumber: String,
         purchaseDateText: String,
         purchasePrice: Double?,
@@ -116,6 +130,7 @@ class GearInventoryViewModel @Inject constructor(
                     category = category.ifBlank { "Accessory" },
                     brand = brand.trim(),
                     model = trimmedModel,
+                    catalogId = catalogId,
                     serialNumber = serialNumber.trim(),
                     purchaseDateText = purchaseDateText.trim(),
                     purchasePrice = purchasePrice,
@@ -187,6 +202,28 @@ class GearInventoryViewModel @Inject constructor(
     fun deleteMaintenance(entry: GearMaintenanceEntryEntity) {
         viewModelScope.launch { gearMaintenanceDao.delete(entry) }
     }
+
+    fun seedFromCurrentCatalog() {
+        viewModelScope.launch {
+            val catalog = withContext(Dispatchers.IO) { GearCatalogLoader.load(appContext) }
+            val existingItems = items.value
+            val existingCatalogIds = existingItems.mapNotNull { it.catalogId }.toSet()
+            val existingInventoryKeys = existingItems.map(::inventoryKey).toSet()
+            val seeds = buildList {
+                addAll(catalog.cameraBodyProfiles.map(::bodySeed))
+                addAll(catalog.lensProfiles.map(::lensSeed))
+            }
+            val missingSeeds = seeds.filter { seed ->
+                seed.catalogId !in existingCatalogIds && inventoryKey(seed) !in existingInventoryKeys
+            }
+            missingSeeds.forEach { seed -> gearItemDao.upsert(seed) }
+            _seedStatus.value = if (missingSeeds.isEmpty()) {
+                "No new items to seed from the ${catalog.source.label.lowercase()}."
+            } else {
+                "Added ${missingSeeds.size} item(s) from the ${catalog.source.label.lowercase()}."
+            }
+        }
+    }
 }
 
 private fun displayName(item: GearItemEntity): String =
@@ -194,3 +231,63 @@ private fun displayName(item: GearItemEntity): String =
         .filter { it.isNotBlank() }
         .joinToString(" ")
         .ifBlank { item.model }
+
+private fun bodySeed(profile: CameraBodyProfile): GearItemEntity {
+    val (brand, model) = splitCatalogLabel(profile.label)
+    val details = buildList {
+        add(profile.description)
+        add("${profile.category.label} body")
+        add("${profile.nativeMount.label} mount")
+        add("${formatOneDecimal(profile.cropFactor.toDouble())}x crop")
+        if (profile.hasInBodyStabilization) add("IBIS")
+    }
+    return GearItemEntity(
+        category = "Body",
+        brand = brand,
+        model = model,
+        catalogId = "body:${profile.id}",
+        serialNumber = "",
+        purchaseDateText = "",
+        purchasePrice = null,
+        currentValue = null,
+        weightGrams = null,
+        notes = details.joinToString(" · "),
+    )
+}
+
+private fun lensSeed(profile: LensProfile): GearItemEntity {
+    val (brand, model) = splitCatalogLabel(profile.label)
+    val details = buildList {
+        add(profile.description)
+        add(profile.focalLengthRangeLabel)
+        add(profile.widestApertureRangeLabel)
+        add(profile.mountSummary)
+        if (profile.hasOpticalStabilization) add("Optical stabilization")
+    }
+    return GearItemEntity(
+        category = "Lens",
+        brand = brand,
+        model = model,
+        catalogId = "lens:${profile.id}",
+        serialNumber = "",
+        purchaseDateText = "",
+        purchasePrice = null,
+        currentValue = null,
+        weightGrams = null,
+        notes = details.joinToString(" · "),
+    )
+}
+
+private fun splitCatalogLabel(label: String): Pair<String, String> {
+    val parts = label.trim().split(Regex("\\s+"), limit = 2)
+    return when {
+        parts.size >= 2 -> parts[0] to parts[1]
+        else -> "" to label.trim()
+    }
+}
+
+private fun inventoryKey(item: GearItemEntity): String =
+    listOf(item.category, item.brand, item.model)
+        .joinToString("|") { it.trim().lowercase() }
+
+private fun formatOneDecimal(value: Double): String = "%.1f".format(value)

@@ -51,6 +51,7 @@ fun GearInventoryScreen(
     val items by viewModel.items.collectAsStateWithLifecycle()
     val kits by viewModel.kits.collectAsStateWithLifecycle()
     val maintenanceEntries by viewModel.maintenanceEntries.collectAsStateWithLifecycle()
+    val seedStatus by viewModel.seedStatus.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<GearItemEntity?>(null) }
     var showEditor by remember { mutableStateOf(false) }
     var editingKit by remember { mutableStateOf<GearKitSummary?>(null) }
@@ -61,6 +62,7 @@ fun GearInventoryScreen(
     val bodyCount = items.count { it.category == "Body" }
     val lensCount = items.count { it.category == "Lens" }
     val accessoryCount = items.count { it.category == "Accessory" }
+    val catalogLinkedCount = items.count { it.catalogId != null }
     val totalWeight = items.sumOf { it.weightGrams ?: 0.0 }
     val totalValue = items.sumOf { it.currentValue ?: 0.0 }
 
@@ -74,6 +76,24 @@ fun GearInventoryScreen(
                 title = "Gear inventory",
                 subtitle = "Track bodies, lenses, kits and maintenance in one place.",
             )
+        }
+        item {
+            OutlinedButton(
+                onClick = { viewModel.seedFromCurrentCatalog() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text("  Seed bodies & lenses from meter catalog")
+            }
+        }
+        seedStatus?.let { status ->
+            item {
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         item {
             OutlinedButton(
@@ -117,12 +137,13 @@ fun GearInventoryScreen(
             item {
                 GearEditorCard(
                     initial = editing,
-                    onSave = { id, category, brand, model, serial, purchaseDate, purchasePrice, currentValue, weightGrams, notes ->
+                    onSave = { id, category, brand, model, catalogId, serial, purchaseDate, purchasePrice, currentValue, weightGrams, notes ->
                         viewModel.save(
                             id = id,
                             category = category,
                             brand = brand,
                             model = model,
+                            catalogId = catalogId,
                             serialNumber = serial,
                             purchaseDateText = purchaseDate,
                             purchasePrice = purchasePrice,
@@ -194,6 +215,7 @@ fun GearInventoryScreen(
                         ResultRow("Bodies", bodyCount.toString())
                         ResultRow("Lenses", lensCount.toString())
                         ResultRow("Accessories", accessoryCount.toString())
+                        ResultRow("Catalog-linked", catalogLinkedCount.toString())
                         ResultRow("Packing kits", kits.size.toString())
                         ResultRow("Maintenance logs", maintenanceEntries.size.toString())
                         ResultRow("Est. value", formatMoney(totalValue))
@@ -538,6 +560,7 @@ private fun GearEditorCard(
         category: String,
         brand: String,
         model: String,
+        catalogId: String?,
         serial: String,
         purchaseDate: String,
         purchasePrice: Double?,
@@ -654,6 +677,7 @@ private fun GearEditorCard(
                             category,
                             brand,
                             model,
+                            initial?.catalogId,
                             serial,
                             purchaseDate,
                             purchasePrice.toDoubleOrNull(),
@@ -816,6 +840,7 @@ private fun GearItemCard(
                 )
             }
             val detailLine = buildList {
+                if (item.catalogId != null) add("Meter catalog")
                 if (item.purchaseDateText.isNotBlank()) add("Bought ${item.purchaseDateText}")
                 item.currentValue?.let { add("Value ${formatMoney(it)}") }
                 item.weightGrams?.let { add(formatWeight(it)) }

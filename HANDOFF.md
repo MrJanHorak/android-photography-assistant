@@ -26,16 +26,19 @@ ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
 
-**Gear tab** now has three Room-backed slices:
+**Gear tab** now has four useful capabilities:
 1. **Inventory foundation** — add/edit/delete bodies, lenses and accessories with brand/model,
    serial, purchase date, purchase/current value, weight and notes.
-2. **Packing kits** — build named kits from saved gear, see total weight, and tick items off
+2. **Catalog seeding** — one-tap import of bodies/lenses from the current metering catalog into
+   the inventory, with duplicate avoidance via nullable `GearItemEntity.catalogId` and a
+   fallback skip for manual brand/model matches already saved.
+3. **Packing kits** — build named kits from saved gear, see total weight, and tick items off
    as packed before leaving.
-3. **Maintenance log** — record cleanings, firmware updates, repairs and shutter-count checkpoints
+4. **Maintenance log** — record cleanings, firmware updates, repairs and shutter-count checkpoints
    against saved gear items.
-Photos and catalog seeding are still TODO.
+Photos and richer metadata are still TODO.
 
-**Persistence:** Room DB `shutterdeck.db` (v5) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v6) + DataStore (Preferences) for theme/settings.
 
 ---
 
@@ -164,9 +167,9 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Finish Phase 4 Gear** — inventory, packing kits and maintenance logs are working, so the
-   next highest-value steps are: catalog seeding/shared gear models, then battery/card and
-   filter/thread tracking.
+1. **Finish Phase 4 Gear** — inventory, catalog seeding, packing kits and maintenance logs are
+   working, so the next highest-value steps are: battery/card tracking, filter/thread tracking,
+   then photo/richer-metadata support.
 2. **Phase 5 Film suite (FL1/FL2)** — film stock DB + roll/frame logger (Room). Strong
    differentiator; reuses reciprocity from Sunny 16 (C6).
 3. **Polish P3/P4:** link a shoot to a saved location; per-shot gear/notes; map view for
@@ -186,9 +189,9 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 ## 9. Known constraints / risks
 - `fallbackToDestructiveMigration(dropAllTables = true)`: bumping the Room `version` deletes
   local data. Acceptable now; add real `Migration`s before shipping to users.
-- Gear inventory, kits and maintenance logs are currently **free-form**. Seeding them from the existing metering catalog is
-  deferred because `CameraBodyProfile` / `LensProfile` still live as `internal` models under
-  `metering/presentation`; moving those to a shared package is the clean follow-up.
+- Gear inventory, kits and maintenance logs are still mostly **free-form**. Catalog seeding now
+  works, but the source models still live under `metering/presentation`; moving them into a
+  more neutral shared package is still a worthwhile cleanup, not a blocker.
 - Light meter logic still partly lives in `metering/presentation/LightMeterScreen.kt`
   (large file) rather than fully in `domain`; refactor opportunistically.
 - KMP `shared` module not yet extracted (Phase 8). Keep domain Android-free to make it cheap.
