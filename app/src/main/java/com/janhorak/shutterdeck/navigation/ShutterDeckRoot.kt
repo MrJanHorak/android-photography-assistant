@@ -19,6 +19,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.janhorak.shutterdeck.calculators.presentation.AstroShutterScreen
+import com.janhorak.shutterdeck.calculators.presentation.DepthOfFieldScreen
+import com.janhorak.shutterdeck.calculators.presentation.FieldOfViewScreen
+import com.janhorak.shutterdeck.calculators.presentation.NdFilterScreen
+import com.janhorak.shutterdeck.calculators.presentation.PrintSizeScreen
 import com.janhorak.shutterdeck.home.HomeScreen
 import com.janhorak.shutterdeck.metering.presentation.LightMeterScreen
 import com.janhorak.shutterdeck.settings.SettingsScreen
@@ -86,6 +91,21 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.LIGHT_METER) {
                 LightMeterScreen()
+            }
+            composable(Routes.DEPTH_OF_FIELD) {
+                DepthOfFieldScreen()
+            }
+            composable(Routes.ND_FILTER) {
+                NdFilterScreen()
+            }
+            composable(Routes.FIELD_OF_VIEW) {
+                FieldOfViewScreen()
+            }
+            composable(Routes.ASTRO_SHUTTER) {
+                AstroShutterScreen()
+            }
+            composable(Routes.PRINT_SIZE) {
+                PrintSizeScreen()
             }
             composable(Routes.PLANNER) {
                 PlaceholderScreen(

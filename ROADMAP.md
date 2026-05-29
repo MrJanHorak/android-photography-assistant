@@ -103,17 +103,12 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
 ### Phase 1 — Finish & polish the existing meter (P1)
 (Carried over from HANDOFF "Best Next Steps".)
 
-- **[BUG1] Verify ISO factor in `requiredShutterSeconds` (HIGH).** In
-  `metering/domain/ExposureMath.kt`, required shutter is `N² · (ISO/100) / 2^EV`, so a
-  higher ISO yields a *longer* required shutter. Correct exposure should need a
-  *shorter* time at higher ISO (factor `100/ISO`). Confirm intended EV convention,
-  then fix and add a regression test. Results match only at ISO 100 today.
-- **[BUG2] Verify stabilization direction in `calculateHandheldMinimumShutterSeconds`
-  (HIGH).** It *divides* by `2^stabilizationStops`, making the handheld limit *faster*
-  with IS/IBIS. Stabilization lets you shoot *slower*, so it should *multiply*.
-  Confirm the intended meaning of "minimum shutter seconds", then fix + test.
-  *Both bugs were found during Phase 0 and left behavior-preserved; they affect the
-  app's core exposure guidance and deserve a deliberate, tested fix.*
+- **[BUG1] ISO factor in `requiredShutterSeconds` — ✅ FIXED (Phase 2).** Now uses
+  `100/ISO` so higher ISO shortens the required shutter, consistent with
+  `reflectiveEv100`. Regression tests added (`requiredShutterSeconds_higherIsoShortensShutter`).
+- **[BUG2] Stabilization direction in `calculateHandheldMinimumShutterSeconds` —
+  ✅ FIXED (Phase 2).** Now *multiplies* by `2^stabilizationStops` so IS/IBIS relaxes
+  the handheld limit. Regression test added (`handheldMinimum_stabilizationAllowsLongerShutter`).
 
 - **[M1] Exposure recipe summary card.** Compact card combining shutter target,
   aperture, ISO, and the priority-based adjustment path. *Acceptance:* card shows a
@@ -126,8 +121,10 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
 
 ### Phase 2 — Core calculators (P1, offline, high value, low risk)
 All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundation.
+> ✅ C1, C3, C4, C5, C8 implemented (pure `calculators/domain` + screens + nav + tests).
+> Remaining: C2, C6, C7, C9, C10, C11.
 
-- **[C1] Depth-of-field calculator.** Inputs: focal length, aperture, focus distance,
+- **[C1] Depth-of-field calculator. ✅** Inputs: focal length, aperture, focus distance,
   sensor/crop (reuse gear catalog). Outputs: near/far limits, total DoF, hyperfocal
   distance, circle of confusion by format. *Acceptance:* matches a known reference table.
 - **[C2] Hyperfocal / focus-stacking helper.** Hyperfocal distance + suggested focus

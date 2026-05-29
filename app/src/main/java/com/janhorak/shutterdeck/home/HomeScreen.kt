@@ -22,11 +22,11 @@ private data class ToolEntry(
 
 private val tools = listOf(
     ToolEntry("Light Meter", "Ambient & reflective metering", Routes.LIGHT_METER),
-    ToolEntry("Depth of Field", "Hyperfocal & near/far limits", null),
-    ToolEntry("ND Filter", "Long-exposure calculator", null),
-    ToolEntry("Field of View", "Angle of view & 35mm equivalent", null),
-    ToolEntry("Astro Shutter", "500 / NPF rule for stars", null),
-    ToolEntry("Print Size", "Pixels to print size at DPI", null),
+    ToolEntry("Depth of Field", "Hyperfocal & near/far limits", Routes.DEPTH_OF_FIELD),
+    ToolEntry("ND Filter", "Long-exposure calculator", Routes.ND_FILTER),
+    ToolEntry("Field of View", "Angle of view & 35mm equivalent", Routes.FIELD_OF_VIEW),
+    ToolEntry("Astro Shutter", "500 / NPF rule for stars", Routes.ASTRO_SHUTTER),
+    ToolEntry("Print Size", "Pixels to print size at DPI", Routes.PRINT_SIZE),
 )
 
 /** Home hub: a grid of available tools. */

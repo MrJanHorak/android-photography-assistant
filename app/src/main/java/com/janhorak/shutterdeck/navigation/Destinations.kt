@@ -15,6 +15,11 @@ object Routes {
     const val MORE = "more"
 
     const val LIGHT_METER = "lightmeter"
+    const val DEPTH_OF_FIELD = "depthoffield"
+    const val ND_FILTER = "ndfilter"
+    const val FIELD_OF_VIEW = "fieldofview"
+    const val ASTRO_SHUTTER = "astroshutter"
+    const val PRINT_SIZE = "printsize"
 }
 
 /** The destinations shown in the bottom navigation bar. */
@@ -35,5 +40,10 @@ fun titleForRoute(route: String?): String = when (route) {
     Routes.GEAR -> "Gear"
     Routes.MORE -> "More"
     Routes.LIGHT_METER -> "Light Meter"
+    Routes.DEPTH_OF_FIELD -> "Depth of Field"
+    Routes.ND_FILTER -> "ND Filter"
+    Routes.FIELD_OF_VIEW -> "Field of View"
+    Routes.ASTRO_SHUTTER -> "Astro Shutter"
+    Routes.PRINT_SIZE -> "Print Size"
     else -> "ShutterDeck"
 }
