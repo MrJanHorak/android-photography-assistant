@@ -20,6 +20,13 @@ object Routes {
     const val FIELD_OF_VIEW = "fieldofview"
     const val ASTRO_SHUTTER = "astroshutter"
     const val PRINT_SIZE = "printsize"
+    const val FOCUS_STACK = "focusstack"
+    const val SUNNY_16 = "sunny16"
+    const val GUIDE_NUMBER = "guidenumber"
+    const val EQUIVALENT_EXPOSURE = "equivalentexposure"
+    const val MACRO = "macro"
+    const val DIFFRACTION = "diffraction"
+    const val SUN_TIMES = "suntimes"
 }
 
 /** The destinations shown in the bottom navigation bar. */
@@ -45,5 +52,12 @@ fun titleForRoute(route: String?): String = when (route) {
     Routes.FIELD_OF_VIEW -> "Field of View"
     Routes.ASTRO_SHUTTER -> "Astro Shutter"
     Routes.PRINT_SIZE -> "Print Size"
+    Routes.FOCUS_STACK -> "Focus Stacking"
+    Routes.SUNNY_16 -> "Sunny 16"
+    Routes.GUIDE_NUMBER -> "Guide Number"
+    Routes.EQUIVALENT_EXPOSURE -> "Equivalent Exposure"
+    Routes.MACRO -> "Macro / Extension"
+    Routes.DIFFRACTION -> "Diffraction Limit"
+    Routes.SUN_TIMES -> "Golden Hour"
     else -> "ShutterDeck"
 }

@@ -21,9 +21,16 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.janhorak.shutterdeck.calculators.presentation.AstroShutterScreen
 import com.janhorak.shutterdeck.calculators.presentation.DepthOfFieldScreen
+import com.janhorak.shutterdeck.calculators.presentation.DiffractionScreen
+import com.janhorak.shutterdeck.calculators.presentation.EquivalentExposureScreen
 import com.janhorak.shutterdeck.calculators.presentation.FieldOfViewScreen
+import com.janhorak.shutterdeck.calculators.presentation.FocusStackingScreen
+import com.janhorak.shutterdeck.calculators.presentation.GuideNumberScreen
+import com.janhorak.shutterdeck.calculators.presentation.MacroScreen
 import com.janhorak.shutterdeck.calculators.presentation.NdFilterScreen
 import com.janhorak.shutterdeck.calculators.presentation.PrintSizeScreen
+import com.janhorak.shutterdeck.calculators.presentation.Sunny16Screen
+import com.janhorak.shutterdeck.calculators.presentation.SunTimesScreen
 import com.janhorak.shutterdeck.home.HomeScreen
 import com.janhorak.shutterdeck.metering.presentation.LightMeterScreen
 import com.janhorak.shutterdeck.settings.SettingsScreen
@@ -107,11 +114,29 @@ fun ShutterDeckRoot() {
             composable(Routes.PRINT_SIZE) {
                 PrintSizeScreen()
             }
+            composable(Routes.FOCUS_STACK) {
+                FocusStackingScreen()
+            }
+            composable(Routes.SUNNY_16) {
+                Sunny16Screen()
+            }
+            composable(Routes.GUIDE_NUMBER) {
+                GuideNumberScreen()
+            }
+            composable(Routes.EQUIVALENT_EXPOSURE) {
+                EquivalentExposureScreen()
+            }
+            composable(Routes.MACRO) {
+                MacroScreen()
+            }
+            composable(Routes.DIFFRACTION) {
+                DiffractionScreen()
+            }
+            composable(Routes.SUN_TIMES) {
+                SunTimesScreen()
+            }
             composable(Routes.PLANNER) {
-                PlaceholderScreen(
-                    title = "Planner",
-                    message = "Golden hour, sun & moon position, locations, and shot lists are coming here.",
-                )
+                SunTimesScreen()
             }
             composable(Routes.GEAR) {
                 PlaceholderScreen(

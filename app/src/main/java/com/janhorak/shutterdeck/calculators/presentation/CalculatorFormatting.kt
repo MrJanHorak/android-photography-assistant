@@ -1,6 +1,7 @@
 package com.janhorak.shutterdeck.calculators.presentation
 
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** Shared presentation-layer formatting for calculator results. */
 
@@ -27,3 +28,11 @@ fun formatInches(inches: Double): String =
 
 fun formatCm(cm: Double): String =
     String.format(Locale.getDefault(), "%.1f cm", cm)
+
+/** Formats minutes-after-local-midnight as a 24h clock time, normalizing day overflow. */
+fun formatClock(minutesAfterMidnight: Double?): String {
+    if (minutesAfterMidnight == null) return "—"
+    var minutes = minutesAfterMidnight.roundToInt()
+    minutes = ((minutes % 1440) + 1440) % 1440
+    return String.format(Locale.getDefault(), "%02d:%02d", minutes / 60, minutes % 60)
+}

@@ -121,36 +121,37 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
 
 ### Phase 2 — Core calculators (P1, offline, high value, low risk)
 All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundation.
-> ✅ C1, C3, C4, C5, C8 implemented (pure `calculators/domain` + screens + nav + tests).
-> Remaining: C2, C6, C7, C9, C10, C11.
+> ✅ Phase 2 COMPLETE — C1–C11 all implemented (pure `calculators/domain` + screens + nav + tests).
 
 - **[C1] Depth-of-field calculator. ✅** Inputs: focal length, aperture, focus distance,
   sensor/crop (reuse gear catalog). Outputs: near/far limits, total DoF, hyperfocal
   distance, circle of confusion by format. *Acceptance:* matches a known reference table.
-- **[C2] Hyperfocal / focus-stacking helper.** Hyperfocal distance + suggested focus
+- **[C2] Hyperfocal / focus-stacking helper. ✅** Hyperfocal distance + suggested focus
   points and overlap for stacking.
-- **[C3] ND filter / long-exposure calculator.** Base shutter + ND stops → resulting
+- **[C3] ND filter / long-exposure calculator. ✅** Base shutter + ND stops → resulting
   shutter; reverse mode; bulb-timer handoff. *Acceptance:* 10-stop on 1/60 → ~17s.
-- **[C4] Field-of-view & equivalent focal length.** Crop factor, angle of view (H/V/D),
+- **[C4] Field-of-view & equivalent focal length. ✅** Crop factor, angle of view (H/V/D),
   35mm-equivalent. Reuse `cropFactor` already in `CameraBodyProfile`.
-- **[C5] Astro shutter calculator (500 / NPF rule).** Max shutter before star trailing,
+- **[C5] Astro shutter calculator (500 / NPF rule). ✅** Max shutter before star trailing,
   from focal length, crop, aperture, pixel pitch (NPF). Pairs with night theme (F4).
-- **[C6] Sunny 16 & reciprocity reference.** Quick exposure reference; film reciprocity
+- **[C6] Sunny 16 & reciprocity reference. ✅** Quick exposure reference; film reciprocity
   failure correction by stock.
-- **[C7] Flash / guide-number calculator.** GN, distance, aperture, ISO interrelation.
-- **[C8] Print size & resolution calculator.** Pixels ↔ print size at chosen DPI;
+- **[C7] Flash / guide-number calculator. ✅** GN, distance, aperture, ISO interrelation.
+- **[C8] Print size & resolution calculator. ✅** Pixels ↔ print size at chosen DPI;
   aspect-ratio and crop helper; viewing-distance "good enough DPI".
-- **[C9] Exposure / equivalent-exposure calculator.** Given an exposure, list
+- **[C9] Exposure / equivalent-exposure calculator. ✅** Given an exposure, list
   equivalent ISO/aperture/shutter triplets (stops in/out).
-- **[C10] Macro / extension calculator.** Magnification, working distance, extension-tube
+- **[C10] Macro / extension calculator. ✅** Magnification, working distance, extension-tube
   exposure compensation, effective aperture.
-- **[C11] Diffraction-limit estimator.** Aperture where diffraction softens a given
+- **[C11] Diffraction-limit estimator. ✅** Aperture where diffraction softens a given
   sensor; "sharpest aperture" hint.
 
 ### Phase 3 — Planning tools (P2; some need location/astronomy, optional APIs)
+> ✅ P1 (golden/blue hour + sun times) implemented via NOAA solar algorithm (`SolarTimes.kt`),
+> surfaced as the **Golden Hour** tool and the **Planner** tab.
 
-- **[P1] Golden/blue hour + sunrise/sunset.** From GPS + date. Use an offline solar
-  algorithm (no network). *Acceptance:* times match a known almanac within minutes.
+- **[P1] Golden/blue hour + sunrise/sunset. ✅** From lat/lon + date + UTC offset. Offline
+  NOAA solar algorithm (no network). *Acceptance:* times match a known almanac within minutes.
 - **[P2] Sun & moon position + moon phase.** Azimuth/elevation track, moonrise/set,
   illumination %. Foundation for a future AR/compass overlay.
 - **[P3] Saved locations / scouting.** Room-backed: name, GPS, notes, best time/season,

@@ -22,10 +22,17 @@ private data class ToolEntry(
 
 private val tools = listOf(
     ToolEntry("Light Meter", "Ambient & reflective metering", Routes.LIGHT_METER),
+    ToolEntry("Golden Hour", "Sunrise, sunset, golden & blue hour", Routes.SUN_TIMES),
     ToolEntry("Depth of Field", "Hyperfocal & near/far limits", Routes.DEPTH_OF_FIELD),
+    ToolEntry("Focus Stacking", "Frames to cover a depth range", Routes.FOCUS_STACK),
     ToolEntry("ND Filter", "Long-exposure calculator", Routes.ND_FILTER),
     ToolEntry("Field of View", "Angle of view & 35mm equivalent", Routes.FIELD_OF_VIEW),
     ToolEntry("Astro Shutter", "500 / NPF rule for stars", Routes.ASTRO_SHUTTER),
+    ToolEntry("Sunny 16", "Daylight exposure & reciprocity", Routes.SUNNY_16),
+    ToolEntry("Equivalent Exposure", "Trade aperture, shutter & ISO", Routes.EQUIVALENT_EXPOSURE),
+    ToolEntry("Guide Number", "Flash distance & aperture", Routes.GUIDE_NUMBER),
+    ToolEntry("Macro / Extension", "Magnification & exposure comp", Routes.MACRO),
+    ToolEntry("Diffraction Limit", "Sharpest aperture for your sensor", Routes.DIFFRACTION),
     ToolEntry("Print Size", "Pixels to print size at DPI", Routes.PRINT_SIZE),
 )
 
