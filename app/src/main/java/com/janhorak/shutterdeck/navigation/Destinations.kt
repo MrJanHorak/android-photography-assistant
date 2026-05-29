@@ -27,6 +27,14 @@ object Routes {
     const val MACRO = "macro"
     const val DIFFRACTION = "diffraction"
     const val SUN_TIMES = "suntimes"
+    const val SUN_MOON_POSITION = "sunmoonposition"
+    const val LOCATIONS = "locations"
+    const val SHOOTS = "shoots"
+
+    const val SHOOT_ID_ARG = "shootId"
+    const val SHOOT_DETAIL = "shoot/{$SHOOT_ID_ARG}"
+
+    fun shootDetail(shootId: Long): String = "shoot/$shootId"
 }
 
 /** The destinations shown in the bottom navigation bar. */
@@ -42,22 +50,29 @@ enum class TopLevelDestination(
 }
 
 /** Human-readable title for the app bar, given the current route. */
-fun titleForRoute(route: String?): String = when (route) {
-    Routes.PLANNER -> "Planner"
-    Routes.GEAR -> "Gear"
-    Routes.MORE -> "More"
-    Routes.LIGHT_METER -> "Light Meter"
-    Routes.DEPTH_OF_FIELD -> "Depth of Field"
-    Routes.ND_FILTER -> "ND Filter"
-    Routes.FIELD_OF_VIEW -> "Field of View"
-    Routes.ASTRO_SHUTTER -> "Astro Shutter"
-    Routes.PRINT_SIZE -> "Print Size"
-    Routes.FOCUS_STACK -> "Focus Stacking"
-    Routes.SUNNY_16 -> "Sunny 16"
-    Routes.GUIDE_NUMBER -> "Guide Number"
-    Routes.EQUIVALENT_EXPOSURE -> "Equivalent Exposure"
-    Routes.MACRO -> "Macro / Extension"
-    Routes.DIFFRACTION -> "Diffraction Limit"
-    Routes.SUN_TIMES -> "Golden Hour"
-    else -> "ShutterDeck"
+fun titleForRoute(route: String?): String = when {
+    route == null -> "ShutterDeck"
+    route.startsWith("shoot/") -> "Shoot"
+    else -> when (route) {
+        Routes.PLANNER -> "Planner"
+        Routes.GEAR -> "Gear"
+        Routes.MORE -> "More"
+        Routes.LIGHT_METER -> "Light Meter"
+        Routes.DEPTH_OF_FIELD -> "Depth of Field"
+        Routes.ND_FILTER -> "ND Filter"
+        Routes.FIELD_OF_VIEW -> "Field of View"
+        Routes.ASTRO_SHUTTER -> "Astro Shutter"
+        Routes.PRINT_SIZE -> "Print Size"
+        Routes.FOCUS_STACK -> "Focus Stacking"
+        Routes.SUNNY_16 -> "Sunny 16"
+        Routes.GUIDE_NUMBER -> "Guide Number"
+        Routes.EQUIVALENT_EXPOSURE -> "Equivalent Exposure"
+        Routes.MACRO -> "Macro / Extension"
+        Routes.DIFFRACTION -> "Diffraction Limit"
+        Routes.SUN_TIMES -> "Golden Hour"
+        Routes.SUN_MOON_POSITION -> "Sun & Moon Position"
+        Routes.LOCATIONS -> "Scouting Locations"
+        Routes.SHOOTS -> "Shoots"
+        else -> "ShutterDeck"
+    }
 }

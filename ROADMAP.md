@@ -11,28 +11,28 @@ later phases depend on the Phase 0 foundation.
 
 ---
 
-## 1. Current State (audit summary)
+## 1. Current State (updated 2026-05-29)
 
-The app today is effectively **one tool** (a light meter + exposure/gear advisor)
-rendered on a single ~1,800-line screen.
+> Historical note: this section originally described a single-screen light-meter app on the
+> `com.example.photography_helper` package. That foundation work (Phase 0) is **done** — the
+> app is now **ShutterDeck** (`com.janhorak.shutterdeck`), a multi-tool shell. See
+> `HANDOFF.md` for the authoritative current snapshot.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10,
-  Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Features:** ambient (lux) metering, reflective camera metering, gear catalog
-  (bodies/lenses with mount compatibility), workflow coaching (ISO/aperture/shutter
-  first), scene presets, custom JSON catalog import + preview, persisted settings.
-- **Persistence:** `SharedPreferences` only (`GearSelectionPreferences`).
-- **Structure:** single `metering` feature package (data/domain/di/presentation).
-  `LightMeterScreen.kt` is 73 KB and holds UI + business logic + formatting helpers.
+**Status:** Phase 0 (foundation) ✅, Phase 2 (all 11 calculators C1–C11) ✅,
+Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅.
+**14 tools** live across a **Tools** grid + **Planner** hub, with **Gear** and **More** tabs.
 
-### Key gaps that block the "Swiss army knife" goal
-1. **No navigation / no multi-tool shell.** Everything is one screen.
-2. **No general database.** Can't store inventory, shoots, locations, clients, etc.
-3. **Business logic is trapped in the UI** (workflow/DoF/exposure math lives in
-   composable files), which hurts testability and blocks an iOS port.
-4. **Placeholder identity:** package `com.example.photography_helper`, leftover
-   `Greeting`/`GreetingPreview` in `MainActivity.kt`, default purple theme.
-5. **Thin test coverage** (only catalog merge/preview tested).
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v2) + DataStore,
+  CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
+- **Validated:** `assembleDebug` green; **74 JVM unit tests, 0 failures**.
+- **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
+  packages with one unit test each — ready for a Phase 8 KMP `shared` module.
+
+### Remaining gaps / next focus
+1. **Tools grid needs categorization** (14 tools, flat 2-col grid).
+2. **Gear tab is still a placeholder** — Phase 4 inventory not started.
+3. **Light-meter business logic** still partly in `LightMeterScreen.kt` (not fully in domain).
+4. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
 ---
 
@@ -147,17 +147,27 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   sensor; "sharpest aperture" hint.
 
 ### Phase 3 — Planning tools (P2; some need location/astronomy, optional APIs)
-> ✅ P1 (golden/blue hour + sun times) implemented via NOAA solar algorithm (`SolarTimes.kt`),
-> surfaced as the **Golden Hour** tool and the **Planner** tab.
+> ✅ P1 (golden/blue hour + sun times) and P2 (sun/moon position + moon phase) implemented
+> offline (`SolarTimes.kt`, `CelestialPosition.kt`), surfaced as the **Golden Hour** and
+> **Sun & Moon** tools and the **Planner** tab.
+
+> ✅ P1 (golden/blue hour + sun times), P2 (sun/moon position + moon phase), P3 (scouting
+> locations) and P4 (shoot/shot-list planner) implemented. P1/P2 are offline-astronomy
+> (`SolarTimes.kt`, `CelestialPosition.kt`); P3/P4 are Room-backed (`planner/` package).
+> The **Planner** bottom-tab is now a hub linking all four.
 
 - **[P1] Golden/blue hour + sunrise/sunset. ✅** From lat/lon + date + UTC offset. Offline
   NOAA solar algorithm (no network). *Acceptance:* times match a known almanac within minutes.
-- **[P2] Sun & moon position + moon phase.** Azimuth/elevation track, moonrise/set,
-  illumination %. Foundation for a future AR/compass overlay.
-- **[P3] Saved locations / scouting.** Room-backed: name, GPS, notes, best time/season,
-  attached reference photos, map pin. *Acceptance:* CRUD + map view.
-- **[P4] Shot list / shoot planner.** Per-shoot checklist of planned shots with
-  status, gear, and notes. *Acceptance:* create shoot, add/check shots, persist.
+- **[P2] Sun & moon position + moon phase. ✅** Azimuth/altitude track for sun and moon,
+  moon illumination % and phase name. Offline SunCalc algorithm (`CelestialPosition.kt`).
+  Foundation for a future AR/compass overlay.
+- **[P3] Saved locations / scouting. ✅** Room-backed CRUD: name, GPS, notes, best time.
+  `LocationEntity`/`LocationDao`/`LocationsViewModel`/`LocationsScreen`.
+  *Still TODO (nice-to-have):* attached reference photos, map pin/map view.
+- **[P4] Shot list / shoot planner. ✅** Room-backed: create a shoot, add/check/delete shots,
+  progress count, cascade-delete. `ShootEntity`+`ShotItemEntity`/`ShootDao`/`ShootsViewModel`+
+  `ShootDetailViewModel`/`ShootsScreen`+`ShootDetailScreen`.
+  *Still TODO (nice-to-have):* per-shot gear/notes fields, reorder, link a shoot to a location.
 - **[P5] Weather snapshot (optional API).** Cloud cover, sun, precipitation for a
   location/time. Requires an API key + graceful offline degradation.
 - **[P6] Milky Way / astro season planner.** Galactic-core visibility windows by date
@@ -252,15 +262,15 @@ Quick reference grab-bag to pull future tasks from:
 
 ## 5. Suggested execution order (TL;DR)
 
-1. **Phase 0 (F1–F6)** — non-negotiable foundation; everything else rides on it.
-2. **Phase 2 calculators (C1, C3, C4, C5, C8)** — fast wins that validate the shell
-   and give immediate user value.
-3. **Phase 1 meter polish (M1, M3)** — finish what's started.
-4. **Phase 3 planner (P1, P3, P4)** and **Phase 4 inventory (G1, G5)** — the
-   "tracking everything" core of the vision.
-5. **Phase 5 film suite** — strong differentiator if you shoot film.
-6. **Phase 6/7** — business + on-shoot utilities as the app matures.
-7. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.
+1. ~~**Phase 0 (F1–F6)** — foundation.~~ ✅ DONE
+2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
+3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
+4. **NEXT → Categorize the Tools grid** (14 tools) into sections, then **Phase 4 inventory
+   (G1, G5)** to fill the Gear tab — the "tracking everything" core of the vision.
+5. **Phase 1 meter polish** (move remaining `LightMeterScreen.kt` logic into `domain`).
+6. **Phase 5 film suite** — strong differentiator if you shoot film.
+7. **Phase 6/7** — business + on-shoot utilities as the app matures.
+8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.
 
 > Rule of thumb for contributors: **put math in `domain` (no Android imports), keep
 > composables thin, persist with Room/DataStore, and write a JVM unit test for every

@@ -15,10 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.janhorak.shutterdeck.calculators.presentation.AstroShutterScreen
 import com.janhorak.shutterdeck.calculators.presentation.DepthOfFieldScreen
 import com.janhorak.shutterdeck.calculators.presentation.DiffractionScreen
@@ -30,9 +32,14 @@ import com.janhorak.shutterdeck.calculators.presentation.MacroScreen
 import com.janhorak.shutterdeck.calculators.presentation.NdFilterScreen
 import com.janhorak.shutterdeck.calculators.presentation.PrintSizeScreen
 import com.janhorak.shutterdeck.calculators.presentation.Sunny16Screen
+import com.janhorak.shutterdeck.calculators.presentation.SunMoonPositionScreen
 import com.janhorak.shutterdeck.calculators.presentation.SunTimesScreen
 import com.janhorak.shutterdeck.home.HomeScreen
 import com.janhorak.shutterdeck.metering.presentation.LightMeterScreen
+import com.janhorak.shutterdeck.planner.presentation.LocationsScreen
+import com.janhorak.shutterdeck.planner.presentation.PlannerScreen
+import com.janhorak.shutterdeck.planner.presentation.ShootDetailScreen
+import com.janhorak.shutterdeck.planner.presentation.ShootsScreen
 import com.janhorak.shutterdeck.settings.SettingsScreen
 import com.janhorak.shutterdeck.ui.components.PlaceholderScreen
 
@@ -135,8 +142,23 @@ fun ShutterDeckRoot() {
             composable(Routes.SUN_TIMES) {
                 SunTimesScreen()
             }
+            composable(Routes.SUN_MOON_POSITION) {
+                SunMoonPositionScreen()
+            }
             composable(Routes.PLANNER) {
-                SunTimesScreen()
+                PlannerScreen(onOpen = { route -> navController.navigate(route) })
+            }
+            composable(Routes.LOCATIONS) {
+                LocationsScreen()
+            }
+            composable(Routes.SHOOTS) {
+                ShootsScreen(onOpenShoot = { id -> navController.navigate(Routes.shootDetail(id)) })
+            }
+            composable(
+                route = Routes.SHOOT_DETAIL,
+                arguments = listOf(navArgument(Routes.SHOOT_ID_ARG) { type = NavType.LongType }),
+            ) {
+                ShootDetailScreen()
             }
             composable(Routes.GEAR) {
                 PlaceholderScreen(

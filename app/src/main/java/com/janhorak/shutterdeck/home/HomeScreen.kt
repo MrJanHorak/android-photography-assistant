@@ -23,6 +23,7 @@ private data class ToolEntry(
 private val tools = listOf(
     ToolEntry("Light Meter", "Ambient & reflective metering", Routes.LIGHT_METER),
     ToolEntry("Golden Hour", "Sunrise, sunset, golden & blue hour", Routes.SUN_TIMES),
+    ToolEntry("Sun & Moon", "Position, azimuth & moon phase", Routes.SUN_MOON_POSITION),
     ToolEntry("Depth of Field", "Hyperfocal & near/far limits", Routes.DEPTH_OF_FIELD),
     ToolEntry("Focus Stacking", "Frames to cover a depth range", Routes.FOCUS_STACK),
     ToolEntry("ND Filter", "Long-exposure calculator", Routes.ND_FILTER),

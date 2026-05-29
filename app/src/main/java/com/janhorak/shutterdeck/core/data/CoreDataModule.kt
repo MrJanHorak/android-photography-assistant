@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.janhorak.shutterdeck.core.data.db.AppDatabase
+import com.janhorak.shutterdeck.core.data.db.LocationDao
 import com.janhorak.shutterdeck.core.data.db.ScenePresetDao
+import com.janhorak.shutterdeck.core.data.db.ShootDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,8 +31,16 @@ object CoreDataModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "shutterdeck.db").build()
+        Room.databaseBuilder(context, AppDatabase::class.java, "shutterdeck.db")
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
 
     @Provides
     fun provideScenePresetDao(database: AppDatabase): ScenePresetDao = database.scenePresetDao()
+
+    @Provides
+    fun provideLocationDao(database: AppDatabase): LocationDao = database.locationDao()
+
+    @Provides
+    fun provideShootDao(database: AppDatabase): ShootDao = database.shootDao()
 }
