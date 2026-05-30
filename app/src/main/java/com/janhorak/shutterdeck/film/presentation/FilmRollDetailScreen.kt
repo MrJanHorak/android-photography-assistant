@@ -43,6 +43,7 @@ import com.janhorak.shutterdeck.film.domain.FILM_ROLL_STATUS_ACTIVE
 import com.janhorak.shutterdeck.film.domain.defaultFilmFrameCapturedAtText
 import com.janhorak.shutterdeck.film.domain.defaultFilmRollCsvFileName
 import com.janhorak.shutterdeck.metering.domain.formatExposureTime
+import com.janhorak.shutterdeck.ui.components.DateTimePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.SectionHeader
 import java.util.Locale
@@ -423,22 +424,18 @@ private fun FilmFrameEditorCard(
                     keyboardType = KeyboardType.Text,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledField(
-                    label = "Focal length",
-                    value = focalLengthText,
-                    onValueChange = { focalLengthText = it },
-                    modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Text,
-                )
-                LabeledField(
-                    label = "Captured at",
-                    value = capturedAtText,
-                    onValueChange = { capturedAtText = it },
-                    modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Text,
-                )
-            }
+            LabeledField(
+                label = "Focal length",
+                value = focalLengthText,
+                onValueChange = { focalLengthText = it },
+                keyboardType = KeyboardType.Text,
+            )
+            DateTimePickerField(
+                label = "Captured at",
+                value = capturedAtText,
+                onValueChange = { capturedAtText = it },
+                allowClear = false,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LabeledField(
                     label = "Latitude",

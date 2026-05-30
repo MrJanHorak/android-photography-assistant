@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.janhorak.shutterdeck.core.data.db.LocationEntity
 import com.janhorak.shutterdeck.core.data.db.ShootEntity
+import com.janhorak.shutterdeck.ui.components.DatePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 
 @Composable
@@ -174,7 +175,7 @@ private fun ShootDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LabeledField("Title", title, { title = it }, keyboardType = KeyboardType.Text)
-                LabeledField("Date", date, { date = it }, keyboardType = KeyboardType.Text)
+                DatePickerField("Date", date, { date = it })
                 LocationPickerField(
                     locations = locations,
                     selectedLocationId = locationId,

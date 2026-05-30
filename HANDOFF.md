@@ -113,6 +113,14 @@ adds a full-screen bubble level with numeric pitch/roll readouts, `SpiritLevelSe
 prefers the gravity sensor and falls back to the accelerometer, and the screen locks portrait while
 active so the tilt math can stay simple and correct instead of remapping every display rotation.
 
+Structured date/time entry now also uses shared picker-backed controls wherever the app expects a
+real formatted date or time. `planner/presentation/ShootsScreen.kt`, the Gear purchase /
+maintenance / loan / battery / card editors, `FilmRollsScreen.kt`, `FilmRollDetailScreen.kt`,
+`SunTimesScreen.kt`, and `SunMoonPositionScreen.kt` now all route through
+`ui/components/PickerFields.kt`, while shared parse/format helpers live in
+`core/time/StructuredDateTime.kt`. Legacy non-ISO strings still remain visible until replaced, but
+new picks are normalized to ISO `YYYY-MM-DD`, `HH:mm`, or `YYYY-MM-DD HH:mm` as appropriate.
+
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
@@ -176,6 +184,10 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   fallback).
 - `utilities/presentation/` — `GrayCardScreen`, `SpiritLevelScreen`, `SpiritLevelViewModel`
   (full-screen On-Shoot Utilities).
+- `core/time/` — `StructuredDateTime` (shared ISO date / time / timestamp parse-format helpers for
+  picker-backed inputs across Gear, Film, Planner, and astronomy tools).
+- `ui/components/` — `PickerFields` (shared Compose date/time/date-time picker buttons + dialogs,
+  with legacy-value messaging and clear actions for optional fields).
 - `film/data/` — `FilmStockCatalogLoader` (bundled JSON parser/fallback loader),
   `FilmStockRepository` (seed bundled starter stocks into Room, enforce read-only built-ins).
 - `film/domain/` — `FilmRollExport` (pure CSV export + filename helpers), `FilmRollLog`
@@ -254,7 +266,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 143 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 146 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -339,6 +351,9 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
   more neutral shared package is still a worthwhile cleanup, not a blocker.
 - Loan/rental reminders are currently **in-app status cues**, not scheduled Android notifications,
   and they only light up when `GearLoanEntity.dueDateText` is saved as ISO `YYYY-MM-DD`.
+- A few fields intentionally remain freeform even after the picker pass — e.g. scouting
+  `LocationEntity.bestTime` still accepts note-like text such as "sunrise after rain" rather than
+  forcing a clock time.
 - Insurance export currently covers the owned inventory list (`GearItemEntity`) only, because
   that is where serial numbers, purchase/current values, purchase source, storage, and reference
   photo attachments are stored today. CSV/PDF files are saved through SAF `CreateDocument`,

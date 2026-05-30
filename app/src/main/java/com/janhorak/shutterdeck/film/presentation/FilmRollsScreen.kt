@@ -44,6 +44,7 @@ import com.janhorak.shutterdeck.core.data.db.FilmStockEntity
 import com.janhorak.shutterdeck.film.domain.FILM_ROLL_STATUS_ACTIVE
 import com.janhorak.shutterdeck.film.domain.FILM_ROLL_STATUS_FINISHED
 import com.janhorak.shutterdeck.film.domain.defaultFilmRollStartedOnText
+import com.janhorak.shutterdeck.ui.components.DatePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.SectionHeader
 import java.util.Locale
@@ -399,11 +400,10 @@ private fun FilmRollEditorCard(
                     keyboardType = KeyboardType.Text,
                 )
             }
-            LabeledField(
+            DatePickerField(
                 label = "Started on",
                 value = startedOnText,
                 onValueChange = { startedOnText = it },
-                keyboardType = KeyboardType.Text,
             )
             LabeledField(
                 label = "Roll notes",

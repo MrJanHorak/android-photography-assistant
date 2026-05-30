@@ -10,6 +10,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.janhorak.shutterdeck.calculators.domain.calculateSunTimes
+import com.janhorak.shutterdeck.core.time.formatStructuredDate
+import com.janhorak.shutterdeck.core.time.parseStructuredDateOrNull
+import com.janhorak.shutterdeck.ui.components.DatePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.ResultRow
 import com.janhorak.shutterdeck.ui.components.SectionHeader
@@ -29,9 +32,7 @@ fun SunTimesScreen(modifier: Modifier = Modifier) {
 
     var latitude by rememberInput("40.7128")
     var longitude by rememberInput("-74.0060")
-    var year by rememberInput(today.year.toString())
-    var month by rememberInput(today.monthValue.toString())
-    var day by rememberInput(today.dayOfMonth.toString())
+    var dateText by rememberInput(formatStructuredDate(today))
     var utcOffset by rememberInput(formatOneDecimal(defaultOffsetHours))
     val currentLocationState = rememberCurrentLocationRequestState { coordinates ->
         latitude = formatCoordinateInput(coordinates.latitude)
@@ -43,15 +44,18 @@ fun SunTimesScreen(modifier: Modifier = Modifier) {
 
     val lat = latitude.toDoubleOrNull()
     val lon = longitude.toDoubleOrNull()
-    val y = year.toIntOrNull()
-    val m = month.toIntOrNull()
-    val d = day.toIntOrNull()
+    val selectedDate = parseStructuredDateOrNull(dateText)
     val tz = utcOffset.toDoubleOrNull()
 
-    val times = if (lat != null && lon != null && y != null && m != null && d != null && tz != null &&
-        m in 1..12 && d in 1..31
-    ) {
-        calculateSunTimes(y, m, d, lat, lon, tz)
+    val times = if (lat != null && lon != null && selectedDate != null && tz != null) {
+        calculateSunTimes(
+            selectedDate.year,
+            selectedDate.monthValue,
+            selectedDate.dayOfMonth,
+            lat,
+            lon,
+            tz,
+        )
     } else {
         null
     }
@@ -66,11 +70,7 @@ fun SunTimesScreen(modifier: Modifier = Modifier) {
             LabeledField("Longitude", longitude, { longitude = it }, modifier = Modifier.weight(1f), suffix = "°")
         }
         CurrentLocationAction(state = currentLocationState)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LabeledField("Year", year, { year = it }, modifier = Modifier.weight(1f))
-            LabeledField("Month", month, { month = it }, modifier = Modifier.weight(1f))
-            LabeledField("Day", day, { day = it }, modifier = Modifier.weight(1f))
-        }
+        DatePickerField("Date", dateText, { dateText = it }, allowClear = false)
         LabeledField("UTC offset", utcOffset, { utcOffset = it }, suffix = "h")
 
         if (times != null) {

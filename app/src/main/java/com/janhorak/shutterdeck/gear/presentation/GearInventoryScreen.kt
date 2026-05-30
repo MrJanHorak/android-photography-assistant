@@ -41,6 +41,7 @@ import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
 import com.janhorak.shutterdeck.gear.domain.defaultGearInsuranceCsvFileName
 import com.janhorak.shutterdeck.gear.domain.defaultGearInsurancePdfFileName
 import com.janhorak.shutterdeck.gear.domain.GearLoanReminderLevel
+import com.janhorak.shutterdeck.ui.components.DatePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.ResultRow
 import com.janhorak.shutterdeck.ui.components.SectionHeader
@@ -773,12 +774,11 @@ private fun MaintenanceEditorCard(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledField(
+                DatePickerField(
                     label = "Date",
                     value = dateText,
                     onValueChange = { dateText = it },
                     modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Text,
                 )
                 LabeledField(
                     label = "Shutter count",
@@ -1007,7 +1007,6 @@ private fun GearEditorCard(
                     value = purchaseDate,
                     onValueChange = { purchaseDate = it },
                     modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Text,
                 )
             }
             if (category == "Lens") {

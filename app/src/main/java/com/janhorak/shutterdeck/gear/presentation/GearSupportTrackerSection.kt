@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
+import com.janhorak.shutterdeck.ui.components.DatePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 
 @Composable
@@ -116,19 +117,17 @@ internal fun BatteryEditorCard(
                     suffix = "%",
                     keyboardType = KeyboardType.Number,
                 )
-                LabeledField(
+                DatePickerField(
                     label = "Last charged",
                     value = lastChargedText,
                     onValueChange = { lastChargedText = it },
                     modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Text,
                 )
             }
-            LabeledField(
+            DatePickerField(
                 label = "Charge checked",
                 value = lastCheckedText,
                 onValueChange = { lastCheckedText = it },
-                keyboardType = KeyboardType.Text,
             )
             LabeledField(
                 label = "Notes",
@@ -306,11 +305,10 @@ internal fun MemoryCardEditorCard(
                     keyboardType = KeyboardType.Text,
                 )
             }
-            LabeledField(
+            DatePickerField(
                 label = "Last formatted",
                 value = lastFormattedText,
                 onValueChange = { lastFormattedText = it },
-                keyboardType = KeyboardType.Text,
             )
             LabeledField(
                 label = "Notes",

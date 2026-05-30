@@ -31,12 +31,16 @@ push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now com
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
 tests. The new **On-Shoot Utilities** section now adds both **Spirit Level** and **Gray Card**:
 full-screen field tools with hidden app chrome, keep-awake display behavior, and dedicated
-sensor/reference UIs for on-shoot use.
+sensor/reference UIs for on-shoot use. Structured date/time entry is now picker-backed across the
+confirmed hard-formatted surfaces too: planner shoot dates, gear purchase/maintenance/loan/support
+dates, film roll/frame timestamps, and the astronomy date/time inputs now share reusable picker
+components plus shared ISO/date-time formatting helpers, while freeform notes such as scouting
+"Best time" stay text.
 
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v15) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **143 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **146 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 

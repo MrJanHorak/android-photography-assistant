@@ -13,9 +13,15 @@ import com.janhorak.shutterdeck.calculators.domain.compassDirection
 import com.janhorak.shutterdeck.calculators.domain.moonIllumination
 import com.janhorak.shutterdeck.calculators.domain.moonPosition
 import com.janhorak.shutterdeck.calculators.domain.sunPosition
+import com.janhorak.shutterdeck.core.time.formatStructuredDate
+import com.janhorak.shutterdeck.core.time.formatStructuredTime
+import com.janhorak.shutterdeck.core.time.parseStructuredDateOrNull
+import com.janhorak.shutterdeck.core.time.parseStructuredTimeOrNull
+import com.janhorak.shutterdeck.ui.components.DatePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.ResultRow
 import com.janhorak.shutterdeck.ui.components.SectionHeader
+import com.janhorak.shutterdeck.ui.components.TimePickerField
 import com.janhorak.shutterdeck.ui.location.CurrentLocationAction
 import com.janhorak.shutterdeck.ui.location.formatCoordinateInput
 import com.janhorak.shutterdeck.ui.location.rememberCurrentLocationRequestState
@@ -35,11 +41,8 @@ fun SunMoonPositionScreen(modifier: Modifier = Modifier) {
 
     var latitude by rememberInput("40.7128")
     var longitude by rememberInput("-74.0060")
-    var year by rememberInput(now.year.toString())
-    var month by rememberInput(now.monthValue.toString())
-    var day by rememberInput(now.dayOfMonth.toString())
-    var hour by rememberInput(now.hour.toString())
-    var minute by rememberInput(now.minute.toString())
+    var dateText by rememberInput(formatStructuredDate(now.toLocalDate()))
+    var timeText by rememberInput(formatStructuredTime(now.toLocalTime()))
     var utcOffset by rememberInput(formatOneDecimal(defaultOffsetHours))
     val currentLocationState = rememberCurrentLocationRequestState { coordinates ->
         latitude = formatCoordinateInput(coordinates.latitude)
@@ -51,19 +54,52 @@ fun SunMoonPositionScreen(modifier: Modifier = Modifier) {
 
     val lat = latitude.toDoubleOrNull()
     val lon = longitude.toDoubleOrNull()
-    val y = year.toIntOrNull()
-    val mo = month.toIntOrNull()
-    val d = day.toIntOrNull()
-    val h = hour.toIntOrNull()
-    val mi = minute.toIntOrNull()
+    val selectedDate = parseStructuredDateOrNull(dateText)
+    val selectedTime = parseStructuredTimeOrNull(timeText)
     val tz = utcOffset.toDoubleOrNull()
 
-    val ready = lat != null && lon != null && y != null && mo != null && d != null &&
-        h != null && mi != null && tz != null
+    val ready = lat != null && lon != null && selectedDate != null && selectedTime != null && tz != null
 
-    val sun = if (ready) sunPosition(y!!, mo!!, d!!, h!!, mi!!, lat!!, lon!!, tz!!) else null
-    val moon = if (ready) moonPosition(y!!, mo!!, d!!, h!!, mi!!, lat!!, lon!!, tz!!) else null
-    val illum = if (ready) moonIllumination(y!!, mo!!, d!!, h!!, mi!!, tz!!) else null
+    val sun = if (ready) {
+        sunPosition(
+            selectedDate!!.year,
+            selectedDate.monthValue,
+            selectedDate.dayOfMonth,
+            selectedTime!!.hour,
+            selectedTime.minute,
+            lat!!,
+            lon!!,
+            tz!!,
+        )
+    } else {
+        null
+    }
+    val moon = if (ready) {
+        moonPosition(
+            selectedDate!!.year,
+            selectedDate.monthValue,
+            selectedDate.dayOfMonth,
+            selectedTime!!.hour,
+            selectedTime.minute,
+            lat!!,
+            lon!!,
+            tz!!,
+        )
+    } else {
+        null
+    }
+    val illum = if (ready) {
+        moonIllumination(
+            selectedDate!!.year,
+            selectedDate.monthValue,
+            selectedDate.dayOfMonth,
+            selectedTime!!.hour,
+            selectedTime.minute,
+            tz!!,
+        )
+    } else {
+        null
+    }
 
     CalculatorScaffold(modifier = modifier) {
         SectionHeader(
@@ -75,16 +111,9 @@ fun SunMoonPositionScreen(modifier: Modifier = Modifier) {
             LabeledField("Longitude", longitude, { longitude = it }, modifier = Modifier.weight(1f), suffix = "°")
         }
         CurrentLocationAction(state = currentLocationState)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LabeledField("Year", year, { year = it }, modifier = Modifier.weight(1f))
-            LabeledField("Month", month, { month = it }, modifier = Modifier.weight(1f))
-            LabeledField("Day", day, { day = it }, modifier = Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LabeledField("Hour", hour, { hour = it }, modifier = Modifier.weight(1f))
-            LabeledField("Minute", minute, { minute = it }, modifier = Modifier.weight(1f))
-            LabeledField("UTC offset", utcOffset, { utcOffset = it }, modifier = Modifier.weight(1f), suffix = "h")
-        }
+        DatePickerField("Date", dateText, { dateText = it }, allowClear = false)
+        TimePickerField("Time", timeText, { timeText = it }, allowClear = false)
+        LabeledField("UTC offset", utcOffset, { utcOffset = it }, suffix = "h")
 
         if (sun != null && moon != null && illum != null) {
             ResultCard {

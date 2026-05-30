@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
 import com.janhorak.shutterdeck.gear.domain.GearLoanReminderLevel
+import com.janhorak.shutterdeck.ui.components.DatePickerField
 import com.janhorak.shutterdeck.ui.components.LabeledField
 
 @Composable
@@ -110,32 +111,24 @@ internal fun GearLoanEditorCard(
                 keyboardType = KeyboardType.Text,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledField(
+                DatePickerField(
                     label = loanStartedLabel(direction),
                     value = startDateText,
                     onValueChange = { startDateText = it },
                     modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Text,
                 )
-                LabeledField(
+                DatePickerField(
                     label = "Return due",
                     value = dueDateText,
                     onValueChange = { dueDateText = it },
                     modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Text,
                 )
             }
-            Text(
-                text = "Use YYYY-MM-DD for due-date reminders (example: 2026-05-30).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             if (status == "Returned" || returnedDateText.isNotBlank()) {
-                LabeledField(
+                DatePickerField(
                     label = "Returned on",
                     value = returnedDateText,
                     onValueChange = { returnedDateText = it },
-                    keyboardType = KeyboardType.Text,
                 )
             }
             LabeledField(

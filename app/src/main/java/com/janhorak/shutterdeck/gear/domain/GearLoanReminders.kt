@@ -1,7 +1,7 @@
 package com.janhorak.shutterdeck.gear.domain
 
+import com.janhorak.shutterdeck.core.time.parseStructuredDateOrNull
 import java.time.LocalDate
-import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 
 enum class GearLoanReminderLevel {
@@ -62,12 +62,5 @@ fun calculateGearLoanReminder(
 }
 
 fun parseGearLoanDate(text: String): LocalDate? {
-    val trimmed = text.trim()
-    if (trimmed.isBlank()) return null
-
-    return try {
-        LocalDate.parse(trimmed)
-    } catch (_: DateTimeParseException) {
-        null
-    }
+    return parseStructuredDateOrNull(text)
 }
