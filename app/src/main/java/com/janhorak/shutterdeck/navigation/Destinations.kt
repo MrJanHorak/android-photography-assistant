@@ -35,6 +35,8 @@ object Routes {
     const val FILM_STOCKS = "filmstocks"
     const val FILM_ROLLS = "filmrolls"
     const val FILM_DEVELOPMENT = "filmdevelopment"
+    const val FILM_PUSH_PULL = "filmpushpull"
+    const val FILM_RECIPROCITY = "filmreciprocity"
     const val FILM_ROLL_ID_ARG = "filmRollId"
     const val FILM_ROLL_DETAIL = "filmroll/{$FILM_ROLL_ID_ARG}"
 
@@ -87,6 +89,8 @@ fun titleForRoute(route: String?): String = when {
         Routes.FILM_STOCKS -> "Film Stocks"
         Routes.FILM_ROLLS -> "Roll Logger"
         Routes.FILM_DEVELOPMENT -> "Development Timer"
+        Routes.FILM_PUSH_PULL -> "Push / Pull Helper"
+        Routes.FILM_RECIPROCITY -> "Reciprocity Assistant"
         Routes.FILM_ROLL_DETAIL -> "Roll Log"
         else -> "ShutterDeck"
     }

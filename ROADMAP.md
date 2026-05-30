@@ -30,15 +30,15 @@ editable custom stocks.
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v12) + DataStore,
   core-library desugaring for `java.time`, CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10,
   Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **102 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **113 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Phase 5 film suite continues with FL4 push/pull guidance** — FL1 film stocks, FL2 roll
-   logging, and FL3 development tools landed, so the next highest-value step is stock-aware
-   push/pull recommendations tied to the existing film metadata and roll workflow.
-2. **Light-meter business logic** still partly in `LightMeterScreen.kt` (not fully in domain).
+1. **Phase 1 meter polish continues** — `LightMeterScreen.kt` still holds business logic that
+   belongs in pure `metering/domain/` helpers now that the Film suite is complete.
+2. **Planner polish (P3/P4)** still has useful follow-through work: linking shoots to locations,
+   richer per-shot notes/gear, map view, and reference-photo attachments.
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
 ---
@@ -240,8 +240,16 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   stop bath, fixer, wash) with recurring agitation cues and pause/resume/reset controls. The live
   countdown stays pinned at the top of the screen while recipe inputs scroll below it, and timer
   sessions are restored via `SavedStateHandle` if the process is recreated mid-run.
-- **[FL4] Push/pull helper.** Adjust dev time/notes for pushed/pulled stocks.
-- **[FL5] Reciprocity correction.** Auto-correct long film exposures by stock (links C6).
+- **[FL4] Push/pull helper. ✅** The Film tab now includes a push/pull guidance screen with either
+  active-roll context or direct stock selection. It compares box ISO against the chosen EI using
+  `log2(EI / ISO)`, rounds the display to third-stop guidance, checks the raw delta against each
+  stock's saved `maxPushStops` / `maxPullStops` when available, surfaces developer notes, and
+  generates a copyable note block for roll or lab logs.
+- **[FL5] Reciprocity correction. ✅** The Film tab now includes a reciprocity assistant that uses
+  a saved stock or active roll to apply stock-specific reciprocity exponent/onset data, show the
+  corrected long-exposure time plus added-stop compensation, and generate a copyable note block.
+  Roll snapshots preserve reciprocity data so the assistant still works even if the linked stock is
+  later removed from the library.
 
 ### Phase 6 — Business / professional (P3; CRM-lite)
 
@@ -310,8 +318,8 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 5 film suite**: build **FL4 push/pull helper** on top of the new Film stocks,
-   roll logging, and development-tool foundation.
+5. **NEXT → Phase 1 meter polish**: move the remaining `LightMeterScreen.kt` business logic into
+   pure domain helpers and tests.
 6. **Phase 1 meter polish** (move remaining `LightMeterScreen.kt` logic into `domain`).
 7. **Phase 6/7** — business + on-shoot utilities as the app matures.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.

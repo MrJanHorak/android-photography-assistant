@@ -35,6 +35,8 @@ import com.janhorak.shutterdeck.calculators.presentation.Sunny16Screen
 import com.janhorak.shutterdeck.calculators.presentation.SunMoonPositionScreen
 import com.janhorak.shutterdeck.calculators.presentation.SunTimesScreen
 import com.janhorak.shutterdeck.film.presentation.FilmDevelopmentScreen
+import com.janhorak.shutterdeck.film.presentation.FilmPushPullScreen
+import com.janhorak.shutterdeck.film.presentation.FilmReciprocityScreen
 import com.janhorak.shutterdeck.film.presentation.FilmScreen
 import com.janhorak.shutterdeck.film.presentation.FilmRollDetailScreen
 import com.janhorak.shutterdeck.film.presentation.FilmRollsScreen
@@ -179,6 +181,12 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.FILM_DEVELOPMENT) {
                 FilmDevelopmentScreen()
+            }
+            composable(Routes.FILM_PUSH_PULL) {
+                FilmPushPullScreen()
+            }
+            composable(Routes.FILM_RECIPROCITY) {
+                FilmReciprocityScreen()
             }
             composable(
                 route = Routes.FILM_ROLL_DETAIL,

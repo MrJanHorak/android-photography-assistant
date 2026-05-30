@@ -14,7 +14,7 @@ Package root: `com.janhorak.shutterdeck`
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
-**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer), **More** (settings/theme).
+**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
 **14 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
@@ -47,6 +47,19 @@ dedicated darkroom screen with an optional saved-roll context selector, a 1+N di
 (pre-soak, developer, stop bath, fixer, wash). The timer shows recurring agitation cues, supports
 pause/resume/reset, keeps the live countdown pinned above the scrollable form, and restores an
 active session from `SavedStateHandle` if the process is recreated while a recipe is running.
+
+**FL4 Push / pull helper** is now live. It can work from either an active saved roll or a library
+stock, compares box ISO against the chosen EI using raw stop deltas, checks the result against each
+stock's saved `maxPushStops` / `maxPullStops` when that data exists, surfaces developer notes, and
+generates a clipboard-ready note block for roll notes or lab logs. Roll-based guidance still works
+after stock deletion, but saved latitude falls back to unavailable unless the live stock entry still
+exists.
+
+**FL5 Reciprocity assistant** is also live. It uses either a saved roll or a library stock to apply
+stock-specific reciprocity exponent/onset data, show the corrected long-exposure time plus added
+compensation stops, surface stock notes when available, and generate a clipboard-ready note block.
+Because rolls snapshot reciprocity exponent/onset values, the reciprocity helper still works from a
+roll even if the linked stock is later removed from the library.
 
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
@@ -106,10 +119,12 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `FilmStockRepository` (seed bundled starter stocks into Room, enforce read-only built-ins).
 - `film/domain/` — `FilmRollExport` (pure CSV export + filename helpers), `FilmRollLog`
   (roll statuses, default timestamps), `FilmDevelopment` (dilution math, temperature compensation,
-  agitation cues, fixed recipe-step builder).
+  agitation cues, fixed recipe-step builder), `FilmPushPull` (EI delta + latitude guidance + note
+  builder), `FilmReciprocity` (stock-aware reciprocity correction + note builder).
 - `film/presentation/` — `FilmScreen` (hub), `FilmStocksScreen`, `FilmStocksViewModel`,
   `FilmRollsScreen`, `FilmRollsViewModel`, `FilmRollDetailScreen`, `FilmRollDetailViewModel`,
-  `FilmDevelopmentScreen`, `FilmDevelopmentViewModel`.
+  `FilmDevelopmentScreen`, `FilmDevelopmentViewModel`, `FilmReferenceViewModel`,
+  `FilmPushPullScreen`, `FilmReciprocityScreen`.
 - `gear/presentation/` — `GearInventoryScreen`, `GearInventoryViewModel`, `GearItemEditState`
   (inventory + filter + battery/card + loans + kits + maintenance summaries),
   `GearFilterTrackerSection.kt`, `GearSupportTrackerSection.kt`, `GearLoanTrackerSection.kt`,
@@ -166,7 +181,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 102 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 113 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -229,12 +244,11 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 5 Film suite (FL4/FL5)** — add stock-aware push/pull guidance on top of the new film
-   stock + roll + development workflow, then deepen the reciprocity assistant.
+1. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain helpers
+   and tests now that the Phase 5 film suite is complete.
 2. **Polish P3/P4** — link a shoot to a saved location; per-shot gear/notes; map view for
    locations; reference-photo attachments.
-3. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain.
-4. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
+3. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
    composition overlays on the CameraX preview.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
@@ -268,6 +282,10 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 - The FL3 development timer is intentionally **session-only** for now: recipe inputs are not saved
   to Room, audio/haptic cues are not implemented yet, and temperature compensation currently follows
   a built-in 16–26C chart with interpolation rather than a fully user-editable chemistry profile.
+- FL4 push/pull and FL5 reciprocity notes are currently **clipboard-generated session aids**, not
+  Room-backed records. Push/pull latitude depends on a live stock entry for `maxPushStops` /
+  `maxPullStops`, while reciprocity remains available from roll snapshots because rolls persist the
+  reciprocity exponent/onset fields.
 - Built-in film reciprocity curves are **starter fits**, not authoritative datasheet replacements.
   Users should keep their own tested custom stock entries when their long-exposure notes differ.
 - Gear reference photos are stored as persisted document URI strings; the screen currently shows

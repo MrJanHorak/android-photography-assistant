@@ -33,12 +33,12 @@ private val filmTools = listOf(
     FilmEntry(
         title = "Push / Pull Helper",
         subtitle = "Quick compensation reference based on each stock's latitude.",
-        route = null,
+        route = Routes.FILM_PUSH_PULL,
     ),
     FilmEntry(
         title = "Reciprocity Assistant",
         subtitle = "Use stock-aware reciprocity data inside the long-exposure workflow.",
-        route = null,
+        route = Routes.FILM_RECIPROCITY,
     ),
 )
 
