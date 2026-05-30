@@ -51,11 +51,29 @@ class ShootDetailViewModel @Inject constructor(
     val shots: StateFlow<List<ShotItemEntity>> = dao.observeShots(shootId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addShot(description: String) {
+    fun saveShot(
+        existing: ShotItemEntity?,
+        description: String,
+        gearNotes: String,
+        notes: String,
+    ) {
         val trimmed = description.trim()
         if (trimmed.isEmpty()) return
         viewModelScope.launch {
-            dao.upsertShot(ShotItemEntity(shootId = shootId, description = trimmed))
+            val normalizedGearNotes = gearNotes.trim()
+            val normalizedNotes = notes.trim()
+            dao.upsertShot(
+                existing?.copy(
+                    description = trimmed,
+                    gearNotes = normalizedGearNotes,
+                    notes = normalizedNotes,
+                ) ?: ShotItemEntity(
+                    shootId = shootId,
+                    description = trimmed,
+                    gearNotes = normalizedGearNotes,
+                    notes = normalizedNotes,
+                ),
+            )
         }
     }
 

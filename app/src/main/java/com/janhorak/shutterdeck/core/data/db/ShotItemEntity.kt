@@ -22,6 +22,8 @@ data class ShotItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val shootId: Long,
     val description: String,
+    val gearNotes: String = "",
+    val notes: String = "",
     val done: Boolean = false,
     val sortOrder: Long = System.currentTimeMillis(),
 )

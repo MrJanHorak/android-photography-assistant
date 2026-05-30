@@ -81,6 +81,12 @@ the same permission/settings/status flow via `ui/location/CurrentLocationUi.kt`,
 `core/location/DeviceLocationProvider.kt` owns the one-shot fused-location lookup. The astronomy
 tools update UTC offset from the device timezone when current-location autofill is used.
 
+The shoot planner now also supports richer **per-shot gear + notes**. `ShotItemEntity` gained
+free-form `gearNotes` and `notes` fields, `ShootDetailViewModel.kt` now preserves existing `done`
+and `sortOrder` data when editing a shot, and `ShootDetailScreen.kt` uses a shared add/edit dialog
+instead of the old one-line shot adder so each shot can carry optional gear and planning notes
+without losing the checklist workflow.
+
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
@@ -111,9 +117,9 @@ tools update UTC offset from the device timezone when current-location autofill 
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v13) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v14) + DataStore (Preferences) for theme/settings.
 This build still uses `fallbackToDestructiveMigration(dropAllTables = true)`, so upgrading from
-v12 to v13 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
+v13 to v14 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
 gear and film records after install.
 
 ---
@@ -274,8 +280,9 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Continue planner polish (P3/P4)** — build on shoot linking + current-location autofill with
-   richer per-shot gear/notes, then map view/reference-photo follow-through for locations.
+1. **Continue planner polish (P3/P4)** — build on shoot linking + current-location autofill +
+   per-shot notes/gear with map view/reference-photo follow-through for saved locations, and
+   optionally shot reordering afterward.
 2. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
    composition overlays on the CameraX preview.
 3. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
