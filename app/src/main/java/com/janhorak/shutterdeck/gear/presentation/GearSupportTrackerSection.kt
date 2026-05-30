@@ -405,7 +405,7 @@ internal fun MemoryCardCard(
 }
 
 @Composable
-private fun GearAssignmentPicker(
+internal fun GearAssignmentPicker(
     title: String,
     description: String,
     availableItems: List<GearItemEntity>,
@@ -470,7 +470,7 @@ private fun GearAssignmentPicker(
 }
 
 @Composable
-private fun SelectableChipRows(
+internal fun SelectableChipRows(
     title: String,
     options: List<String>,
     selectedOption: String,

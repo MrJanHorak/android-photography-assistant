@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
+import com.janhorak.shutterdeck.gear.domain.GearLoanReminderLevel
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.ResultRow
 import com.janhorak.shutterdeck.ui.components.SectionHeader
@@ -55,6 +56,7 @@ fun GearInventoryScreen(
     val lensThreadCompatibility by viewModel.lensThreadCompatibility.collectAsStateWithLifecycle()
     val batteries by viewModel.batteries.collectAsStateWithLifecycle()
     val memoryCards by viewModel.memoryCards.collectAsStateWithLifecycle()
+    val loans by viewModel.loans.collectAsStateWithLifecycle()
     val kits by viewModel.kits.collectAsStateWithLifecycle()
     val maintenanceEntries by viewModel.maintenanceEntries.collectAsStateWithLifecycle()
     val seedStatus by viewModel.seedStatus.collectAsStateWithLifecycle()
@@ -68,6 +70,8 @@ fun GearInventoryScreen(
     var showBatteryEditor by remember { mutableStateOf(false) }
     var editingMemoryCard by remember { mutableStateOf<MemoryCardSummary?>(null) }
     var showMemoryCardEditor by remember { mutableStateOf(false) }
+    var editingLoan by remember { mutableStateOf<GearLoanSummary?>(null) }
+    var showLoanEditor by remember { mutableStateOf(false) }
     var editingKit by remember { mutableStateOf<GearKitSummary?>(null) }
     var showKitEditor by remember { mutableStateOf(false) }
     var editingMaintenance by remember { mutableStateOf<GearMaintenanceEntrySummary?>(null) }
@@ -102,6 +106,12 @@ fun GearInventoryScreen(
     val needsChargeBatteryCount = batteries.count { it.battery.status == "Needs charge" }
     val emptyCardCount = memoryCards.count { it.card.status == "Empty" }
     val fullCardCount = memoryCards.count { it.card.status == "Full" }
+    val openLoanCount = loans.count { it.loan.status == "Active" }
+    val dueSoonLoanCount = loans.count {
+        it.reminder?.level == GearLoanReminderLevel.UPCOMING ||
+            it.reminder?.level == GearLoanReminderLevel.DUE_TODAY
+    }
+    val overdueLoanCount = loans.count { it.reminder?.level == GearLoanReminderLevel.OVERDUE }
     val totalWeight = items.sumOf { it.weightGrams ?: 0.0 }
     val totalValue = items.sumOf { it.currentValue ?: 0.0 }
     val totalBatteryCapacity = batteries.sumOf { it.battery.capacityMah?.toLong() ?: 0L }
@@ -110,6 +120,7 @@ fun GearInventoryScreen(
         filters.isNotEmpty() ||
         batteries.isNotEmpty() ||
         memoryCards.isNotEmpty() ||
+        loans.isNotEmpty() ||
         kits.isNotEmpty() ||
         maintenanceEntries.isNotEmpty()
     val closeAllEditors = {
@@ -122,6 +133,8 @@ fun GearInventoryScreen(
         showBatteryEditor = false
         editingMemoryCard = null
         showMemoryCardEditor = false
+        editingLoan = null
+        showLoanEditor = false
         editingKit = null
         showKitEditor = false
         editingMaintenance = null
@@ -149,6 +162,11 @@ fun GearInventoryScreen(
         editingMemoryCard = card
         showMemoryCardEditor = true
     }
+    val openLoanEditor: (GearLoanSummary?) -> Unit = { loan ->
+        closeAllEditors()
+        editingLoan = loan
+        showLoanEditor = true
+    }
     val openKitEditor: (GearKitSummary?) -> Unit = { kit ->
         closeAllEditors()
         editingKit = kit
@@ -168,7 +186,7 @@ fun GearInventoryScreen(
         item {
             SectionHeader(
                 title = "Gear inventory",
-                subtitle = "Track bodies, lenses, filters, batteries, cards, kits and maintenance in one place.",
+                subtitle = "Track bodies, lenses, filters, batteries, cards, loans, kits and maintenance in one place.",
             )
         }
         item {
@@ -232,6 +250,15 @@ fun GearInventoryScreen(
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Text("  Add memory card")
+            }
+        }
+        item {
+            OutlinedButton(
+                onClick = { openLoanEditor(null) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text("  Add loan / rental")
             }
         }
         item {
@@ -336,6 +363,30 @@ fun GearInventoryScreen(
                 )
             }
         }
+        if (showLoanEditor) {
+            item {
+                GearLoanEditorCard(
+                    initial = editingLoan,
+                    availableItems = items,
+                    onSave = { id, linkedGearItemId, customItemLabel, direction, counterpartName, status, startDateText, dueDateText, returnedDateText, notes ->
+                        viewModel.saveLoan(
+                            id = id,
+                            linkedGearItemId = linkedGearItemId,
+                            customItemLabel = customItemLabel,
+                            direction = direction,
+                            counterpartName = counterpartName,
+                            status = status,
+                            startDateText = startDateText,
+                            dueDateText = dueDateText,
+                            returnedDateText = returnedDateText,
+                            notes = notes,
+                        )
+                        closeAllEditors()
+                    },
+                    onCancel = closeAllEditors,
+                )
+            }
+        }
         if (showKitEditor) {
             item {
                 GearKitEditorCard(
@@ -399,6 +450,10 @@ fun GearInventoryScreen(
                         ResultRow("Memory cards", memoryCards.size.toString())
                         ResultRow("Empty cards", emptyCardCount.toString())
                         ResultRow("Full cards", fullCardCount.toString())
+                        ResultRow("Loans / rentals", loans.size.toString())
+                        ResultRow("Open loans / rentals", openLoanCount.toString())
+                        ResultRow("Due soon", dueSoonLoanCount.toString())
+                        ResultRow("Overdue", overdueLoanCount.toString())
                         ResultRow("Packing kits", kits.size.toString())
                         ResultRow("Maintenance logs", maintenanceEntries.size.toString())
                         ResultRow("Est. value", formatMoney(totalValue))
@@ -500,6 +555,28 @@ fun GearInventoryScreen(
                 summary = card,
                 onEdit = { openMemoryCardEditor(card) },
                 onDelete = { viewModel.deleteMemoryCard(card.card) },
+            )
+        }
+        item {
+            SectionHeader(
+                title = "Loans & rentals",
+                subtitle = "Track who has your gear, what you borrowed or rented, and what is due back soon.",
+            )
+        }
+        if (loans.isEmpty()) {
+            item {
+                Text(
+                    text = "No loan or rental entries yet. Log borrowed bodies, rented lenses or gear you lent to someone else and save a due date for reminders.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        items(loans, key = { it.loan.id }) { loan ->
+            GearLoanCard(
+                summary = loan,
+                onEdit = { openLoanEditor(loan) },
+                onDelete = { viewModel.deleteLoan(loan.loan) },
             )
         }
         item {

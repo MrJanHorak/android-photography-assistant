@@ -11,7 +11,7 @@ later phases depend on the Phase 0 foundation.
 
 ---
 
-## 1. Current State (updated 2026-05-29)
+## 1. Current State (updated 2026-05-30)
 
 > Historical note: this section originally described a single-screen light-meter app on the
 > `com.example.photography_helper` package. That foundation work (Phase 0) is **done** — the
@@ -22,19 +22,20 @@ later phases depend on the Phase 0 foundation.
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅.
 The **Tools** grid is now sectioned for scanability, and the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
-battery/card tracking, packing kits and maintenance logs.
+battery/card tracking, loan/rental tracking, packing kits and maintenance logs.
 **14 tools** live across the **Tools** grid + **Planner** hub.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v9) + DataStore,
-  CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **80 JVM unit tests, 0 failures**.
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v10) + DataStore,
+  core-library desugaring for `java.time`, CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10,
+  Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
+- **Validated:** `assembleDebug` green; **87 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
 1. **Gear is still incomplete** — inventory CRUD, catalog seeding, richer metadata/reference-photo
-   attachments, filter/thread tracking, battery/card tracking, packing kits and maintenance logs
-   exist, but longer-tail inventory workflows (loans, exports) are still missing.
+   attachments, filter/thread tracking, battery/card tracking, loan/rental tracking, packing kits
+   and maintenance logs exist, but the insurance/export workflow is still missing.
 2. **Light-meter business logic** still partly in `LightMeterScreen.kt` (not fully in domain).
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
@@ -187,7 +188,7 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   richer metadata fields (`conditionLabel`, `storageLocation`, `purchaseSource`), and a
   lightweight persisted `referencePhotoUri` attachment with replace/clear support. Imported rows
   keep a nullable `catalogId` and the seed step also skips manual brand/model matches already in
-  inventory. **Remaining:** richer loan/rental/export workflows and optional future photo preview UX.
+  inventory. **Remaining:** insurance/export workflow and optional future photo preview UX.
 - **[G2] Maintenance & firmware log. ✅** Sensor cleanings, repairs, firmware versions,
   shutter count tracking. Room-backed in the Gear tab via `GearMaintenanceEntryEntity` +
   `GearMaintenanceDao`, with event type, date, notes and optional shutter-count checkpoints.
@@ -203,7 +204,11 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
 - **[G5] Packing / kit lists with weight. ✅** Build named kits; total weight for travel;
   checklists you tick before leaving. Room-backed in the Gear tab via `GearKitEntity` +
   `GearKitItemEntity` + `GearKitDao`, surfaced in `GearInventoryScreen`.
-- **[G6] Loaned/rented gear tracker.** Who/when/return-due reminders.
+- **[G6] Loaned/rented gear tracker. ✅** Room-backed `GearLoanEntity` / `GearLoanDao` with optional
+  linkage to saved inventory gear (or free-form external gear labels), direction/status fields,
+  counterpart/date/notes tracking, Gear-tab CRUD, summary counts, and in-app due-soon / overdue
+  reminders driven by a tested pure-Kotlin `GearLoanReminders.kt` helper. Due-date reminders light
+  up when `dueDateText` uses ISO `YYYY-MM-DD`.
 - **[G7] Insurance/value export.** Export inventory (CSV/PDF) for insurance.
 
 ### Phase 5 — Film photography suite (P2; strong differentiator)

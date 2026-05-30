@@ -11,6 +11,7 @@ import com.janhorak.shutterdeck.core.data.db.GearBatteryDao
 import com.janhorak.shutterdeck.core.data.db.GearFilterDao
 import com.janhorak.shutterdeck.core.data.db.GearKitDao
 import com.janhorak.shutterdeck.core.data.db.GearItemDao
+import com.janhorak.shutterdeck.core.data.db.GearLoanDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardDao
 import com.janhorak.shutterdeck.core.data.db.LocationDao
@@ -61,6 +62,9 @@ object CoreDataModule {
 
     @Provides
     fun provideGearMemoryCardDao(database: AppDatabase): GearMemoryCardDao = database.gearMemoryCardDao()
+
+    @Provides
+    fun provideGearLoanDao(database: AppDatabase): GearLoanDao = database.gearLoanDao()
 
     @Provides
     fun provideGearKitDao(database: AppDatabase): GearKitDao = database.gearKitDao()

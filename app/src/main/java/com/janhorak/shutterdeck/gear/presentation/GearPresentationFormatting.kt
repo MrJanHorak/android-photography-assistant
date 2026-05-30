@@ -26,6 +26,8 @@ internal val filterTypeOptions = listOf(
 internal val batteryStatusOptions = listOf("Ready", "Charging", "Needs charge", "Retired")
 internal val memoryCardStatusOptions = listOf("Empty", "In use", "Full", "Backed up", "Needs format")
 internal val memoryCardTypeOptions = listOf("SD", "microSD", "CFexpress A", "CFexpress B", "CFast", "XQD", "Other")
+internal val loanDirectionOptions = listOf("Loaned out", "Borrowed", "Rented")
+internal val loanStatusOptions = listOf("Active", "Returned", "Lost")
 
 internal fun gearDisplayName(item: GearItemEntity): String =
     listOf(item.brand.trim(), item.model.trim())
@@ -82,4 +84,29 @@ internal fun referencePhotoLabel(uriString: String): String {
         .ifBlank { trimmed }
 
     return URLDecoder.decode(encodedLabel, StandardCharsets.UTF_8)
+}
+
+internal fun loanCounterpartFieldLabel(direction: String): String = when (direction) {
+    "Loaned out" -> "Loaned to"
+    "Borrowed" -> "Borrowed from"
+    "Rented" -> "Rented from"
+    else -> "Counterpart"
+}
+
+internal fun loanCounterpartSummary(direction: String, counterpartName: String): String {
+    val trimmedName = counterpartName.trim()
+    if (trimmedName.isBlank()) return ""
+
+    return when (direction) {
+        "Loaned out" -> "To $trimmedName"
+        "Borrowed", "Rented" -> "From $trimmedName"
+        else -> trimmedName
+    }
+}
+
+internal fun loanStartedLabel(direction: String): String = when (direction) {
+    "Loaned out" -> "Loaned on"
+    "Borrowed" -> "Borrowed on"
+    "Rented" -> "Rented on"
+    else -> "Started"
 }

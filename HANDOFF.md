@@ -1,6 +1,6 @@
 # ShutterDeck — Handoff Snapshot
 
-Date: 2026-05-29
+Date: 2026-05-30
 Repo: `MrJanHorak/android-photography-assistant` · Working dir: `D:\androidprojects`
 Package root: `com.janhorak.shutterdeck`
 
@@ -14,7 +14,7 @@ Package root: `com.janhorak.shutterdeck`
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
-**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + kits + maintenance), **More** (settings/theme).
+**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + kits + maintenance), **More** (settings/theme).
 
 **14 working tools** (all reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**):
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
@@ -26,7 +26,7 @@ ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
 
-**Gear tab** now has seven useful capabilities:
+**Gear tab** now has eight useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
    lens thread size, condition, storage location, purchase source, and a lightweight reference-photo
@@ -40,16 +40,20 @@ and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
    state, capacity, health, current charge percentage, last charged date, last checked date and notes.
 5. **Memory-card tracker** — Room-backed card inventory with optional gear linkage, card type,
    capacity, speed label, workflow status, last formatted date and notes.
-6. **Packing kits** — build named kits from saved gear, see total weight, and tick items off
+6. **Loan / rental tracker** — Room-backed loan records with optional linkage to saved inventory
+   items (or a manual external-gear label), direction/status fields, counterpart/date/notes,
+   Gear-tab CRUD, summary counts, and in-app due-soon / overdue reminders when the due date is
+   saved as ISO `YYYY-MM-DD`.
+7. **Packing kits** — build named kits from saved gear, see total weight, and tick items off
    as packed before leaving.
-7. **Maintenance log** — record cleanings, firmware updates, repairs and shutter-count checkpoints
+8. **Maintenance log** — record cleanings, firmware updates, repairs and shutter-count checkpoints
    against saved gear items.
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v9) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v10) + DataStore (Preferences) for theme/settings.
 This build still uses `fallbackToDestructiveMigration(dropAllTables = true)`, so upgrading from
-v8 to v9 wipes local Room data; reseed the gear catalog and recreate local planner/gear records after install.
+v9 to v10 wipes local Room data; reseed the gear catalog and recreate local planner/gear records after install.
 
 ---
 
@@ -71,8 +75,10 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `ShutterDeckRoot.kt` (Scaffold + bottom nav + `NavHost`).
 - `home/HomeScreen.kt` — the sectioned Tools grid (`toolSections`).
 - `gear/presentation/` — `GearInventoryScreen`, `GearInventoryViewModel`, `GearItemEditState`
-  (inventory + filter + battery/card + kits + maintenance summaries),
-  `GearFilterTrackerSection.kt`, `GearSupportTrackerSection.kt`, `GearPresentationFormatting.kt`.
+  (inventory + filter + battery/card + loans + kits + maintenance summaries),
+  `GearFilterTrackerSection.kt`, `GearSupportTrackerSection.kt`, `GearLoanTrackerSection.kt`,
+  `GearPresentationFormatting.kt`.
+- `gear/domain/` — `GearLoanReminders.kt` (pure reminder helper for due-soon/overdue status).
 - `calculators/domain/` — 13 pure calculators incl. `SolarTimes.kt`, `CelestialPosition.kt`.
 - `calculators/presentation/` — one screen per calculator + shared infra:
   `CalculatorScaffold.kt` (CalculatorScaffold/ResultCard/CalculatorHint),
@@ -85,6 +91,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `db/` (`AppDatabase`, entities, DAOs incl. `GearItemEntity` / `GearItemDao`,
   `GearFilterEntity` / `GearFilterDao`,
   `GearBatteryEntity` / `GearBatteryDao`, `GearMemoryCardEntity` / `GearMemoryCardDao`,
+  `GearLoanEntity` / `GearLoanDao`,
   `GearKitEntity` / `GearKitItemEntity` / `GearKitDao`, and
   `GearMaintenanceEntryEntity` / `GearMaintenanceDao`).
 - `ui/components/` — `ToolCard`, `ResultRow`, `SectionHeader`, `LabeledField`,
@@ -98,6 +105,8 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   DataStore `1.1.1` · Gradle wrapper `9.4.1` · minSdk 24 / targetSdk 36 / JDK 21.
 - Versions are centralized in `gradle/libs.versions.toml`.
 - Do **not** apply `org.jetbrains.kotlin.android` (AGP built-in Kotlin is used).
+- `app/build.gradle.kts` now enables **core library desugaring** so existing `java.time`
+  usage works correctly on minSdk 24–25 devices.
 - `android.disallowKotlinSourceSets=false` is required (Gradle warns it's experimental — expected).
 - Harmless warnings: Hilt annotation target (KT-73255). Ignore.
 
@@ -118,7 +127,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 80 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 87 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -182,8 +191,8 @@ The user commits the code themselves — **do not git commit** unless asked.
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
 1. **Finish Phase 4 Gear** — inventory, catalog seeding, richer metadata/reference-photo support,
-   filter/thread tracking, battery/card tracking, packing kits and maintenance logs are working,
-   so the next highest-value steps are loan/rental and insurance/export workflows.
+   filter/thread tracking, battery/card tracking, loan/rental tracking, packing kits and
+   maintenance logs are working, so the next highest-value step is the insurance/export workflow.
 2. **Phase 5 Film suite (FL1/FL2)** — film stock DB + roll/frame logger (Room). Strong
    differentiator; reuses reciprocity from Sunny 16 (C6).
 3. **Polish P3/P4:** link a shoot to a saved location; per-shot gear/notes; map view for
@@ -206,6 +215,8 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 - Gear inventory, kits and maintenance logs are still mostly **free-form**. Catalog seeding now
   works, but the source models still live under `metering/presentation`; moving them into a
   more neutral shared package is still a worthwhile cleanup, not a blocker.
+- Loan/rental reminders are currently **in-app status cues**, not scheduled Android notifications,
+  and they only light up when `GearLoanEntity.dueDateText` is saved as ISO `YYYY-MM-DD`.
 - Filter compatibility is **derived**, not hard-linked: `GearItemEntity.filterThreadSizeText`
   and `GearFilterEntity.threadSizeText` are normalized via a blank-safe helper so unfilled
   values never match each other by accident.

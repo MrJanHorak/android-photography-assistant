@@ -14,10 +14,16 @@ import com.janhorak.shutterdeck.core.data.db.GearKitEntity
 import com.janhorak.shutterdeck.core.data.db.GearKitItemEntity
 import com.janhorak.shutterdeck.core.data.db.GearItemDao
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
+import com.janhorak.shutterdeck.core.data.db.GearLoanDao
+import com.janhorak.shutterdeck.core.data.db.GearLoanEntity
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardDao
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardEntity
+import com.janhorak.shutterdeck.gear.domain.GearLoanReminder
+import com.janhorak.shutterdeck.gear.domain.GearLoanReminderLevel
+import com.janhorak.shutterdeck.gear.domain.calculateGearLoanReminder
+import com.janhorak.shutterdeck.gear.domain.parseGearLoanDate
 import com.janhorak.shutterdeck.metering.presentation.CameraBodyProfile
 import com.janhorak.shutterdeck.metering.presentation.GearCatalogLoader
 import com.janhorak.shutterdeck.metering.presentation.LensProfile
@@ -64,6 +70,13 @@ data class MemoryCardSummary(
     val linkedItemLabel: String,
 )
 
+data class GearLoanSummary(
+    val loan: GearLoanEntity,
+    val itemLabel: String,
+    val linkedItemLabel: String?,
+    val reminder: GearLoanReminder?,
+)
+
 data class GearFilterSummary(
     val filter: GearFilterEntity,
     val normalizedThreadKey: String?,
@@ -83,6 +96,7 @@ class GearInventoryViewModel @Inject constructor(
     private val gearFilterDao: GearFilterDao,
     private val gearBatteryDao: GearBatteryDao,
     private val gearMemoryCardDao: GearMemoryCardDao,
+    private val gearLoanDao: GearLoanDao,
     private val gearKitDao: GearKitDao,
     private val gearMaintenanceDao: GearMaintenanceDao,
 ) : ViewModel() {
@@ -193,6 +207,32 @@ class GearInventoryViewModel @Inject constructor(
             compareBy<MemoryCardSummary> { memoryCardStatusRank(it.card.status) }
                 .thenBy { it.linkedItemLabel.lowercase() }
                 .thenBy { it.card.label.lowercase() },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val loans: StateFlow<List<GearLoanSummary>> = combine(
+        items,
+        gearLoanDao.observeAll(),
+    ) { inventoryItems, loans ->
+        val itemMap = inventoryItems.associateBy { it.id }
+        loans.map { loan ->
+            val linkedItemLabel = loan.linkedGearItemId
+                ?.let { itemId -> itemMap[itemId]?.let(::gearDisplayName) }
+            val itemLabel = linkedItemLabel
+                ?: loan.customItemLabel.trim().ifBlank { "Unnamed gear" }
+            GearLoanSummary(
+                loan = loan,
+                itemLabel = itemLabel,
+                linkedItemLabel = linkedItemLabel,
+                reminder = calculateGearLoanReminder(
+                    status = loan.status,
+                    dueDateText = loan.dueDateText,
+                ),
+            )
+        }.sortedWith(
+            compareBy<GearLoanSummary> { gearLoanSortRank(it) }
+                .thenBy { parseGearLoanDate(it.loan.dueDateText)?.toEpochDay() ?: Long.MAX_VALUE }
+                .thenBy { it.itemLabel.lowercase() },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -400,6 +440,50 @@ class GearInventoryViewModel @Inject constructor(
 
     fun deleteMemoryCard(item: GearMemoryCardEntity) {
         viewModelScope.launch { gearMemoryCardDao.delete(item) }
+    }
+
+    fun saveLoan(
+        id: Long,
+        linkedGearItemId: Long?,
+        customItemLabel: String,
+        direction: String,
+        counterpartName: String,
+        status: String,
+        startDateText: String,
+        dueDateText: String,
+        returnedDateText: String,
+        notes: String,
+    ) {
+        val trimmedCounterpartName = counterpartName.trim()
+        val linkedItemFallback = linkedGearItemId
+            ?.let { itemId -> items.value.firstOrNull { it.id == itemId }?.let(::gearDisplayName) }
+            .orEmpty()
+        val trimmedCustomItemLabel = customItemLabel.trim().ifBlank { linkedItemFallback }
+        val createdAt = loans.value.firstOrNull { it.loan.id == id }?.loan?.createdAt
+            ?: System.currentTimeMillis()
+        if (trimmedCustomItemLabel.isEmpty() || trimmedCounterpartName.isEmpty()) return
+
+        viewModelScope.launch {
+            gearLoanDao.upsert(
+                GearLoanEntity(
+                    id = id,
+                    linkedGearItemId = linkedGearItemId,
+                    customItemLabel = trimmedCustomItemLabel,
+                    direction = direction.ifBlank { loanDirectionOptions.first() },
+                    counterpartName = trimmedCounterpartName,
+                    status = status.ifBlank { loanStatusOptions.first() },
+                    startDateText = startDateText.trim(),
+                    dueDateText = dueDateText.trim(),
+                    returnedDateText = if (status == "Returned") returnedDateText.trim() else "",
+                    notes = notes.trim(),
+                    createdAt = createdAt,
+                ),
+            )
+        }
+    }
+
+    fun deleteLoan(item: GearLoanEntity) {
+        viewModelScope.launch { gearLoanDao.delete(item) }
     }
 
     fun saveKit(
@@ -622,9 +706,24 @@ private fun filterLabel(filter: GearFilterEntity): String =
 private val filterTypeOrder = filterTypeOptions.withIndex().associate { it.value to it.index }
 private val batteryStatusOrder = batteryStatusOptions.withIndex().associate { it.value to it.index }
 private val memoryCardStatusOrder = memoryCardStatusOptions.withIndex().associate { it.value to it.index }
+private val loanStatusOrder = loanStatusOptions.withIndex().associate { it.value to it.index }
 
 private fun filterTypeRank(type: String): Int = filterTypeOrder[type] ?: filterTypeOrder.size
 
 private fun batteryStatusRank(status: String): Int = batteryStatusOrder[status] ?: batteryStatusOrder.size
 
 private fun memoryCardStatusRank(status: String): Int = memoryCardStatusOrder[status] ?: memoryCardStatusOrder.size
+
+private fun gearLoanStatusRank(status: String): Int = loanStatusOrder[status] ?: loanStatusOrder.size
+
+private fun gearLoanReminderRank(reminder: GearLoanReminder?): Int = when (reminder?.level) {
+    GearLoanReminderLevel.OVERDUE -> 0
+    GearLoanReminderLevel.DUE_TODAY -> 1
+    GearLoanReminderLevel.UPCOMING -> 2
+    null -> 3
+}
+
+private fun gearLoanSortRank(summary: GearLoanSummary): Int = when (summary.loan.status) {
+    "Active" -> gearLoanReminderRank(summary.reminder)
+    else -> 10 + gearLoanStatusRank(summary.loan.status)
+}

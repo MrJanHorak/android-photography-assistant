@@ -14,11 +14,12 @@ import androidx.room.RoomDatabase
         GearFilterEntity::class,
         GearBatteryEntity::class,
         GearMemoryCardEntity::class,
+        GearLoanEntity::class,
         GearKitEntity::class,
         GearKitItemEntity::class,
         GearMaintenanceEntryEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gearFilterDao(): GearFilterDao
     abstract fun gearBatteryDao(): GearBatteryDao
     abstract fun gearMemoryCardDao(): GearMemoryCardDao
+    abstract fun gearLoanDao(): GearLoanDao
     abstract fun gearKitDao(): GearKitDao
     abstract fun gearMaintenanceDao(): GearMaintenanceDao
 }
