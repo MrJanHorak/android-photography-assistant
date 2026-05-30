@@ -49,6 +49,7 @@ import com.janhorak.shutterdeck.planner.presentation.PlannerScreen
 import com.janhorak.shutterdeck.planner.presentation.ShootDetailScreen
 import com.janhorak.shutterdeck.planner.presentation.ShootsScreen
 import com.janhorak.shutterdeck.settings.SettingsScreen
+import com.janhorak.shutterdeck.utilities.presentation.CompositionOverlayScreen
 import com.janhorak.shutterdeck.utilities.presentation.GrayCardScreen
 import com.janhorak.shutterdeck.utilities.presentation.SpiritLevelScreen
 
@@ -61,7 +62,12 @@ fun ShutterDeckRoot() {
     val currentRoute = backStackEntry?.destination?.route
     val topLevelRoutes = TopLevelDestination.entries.map { it.route }.toSet()
     val showBackButton = currentRoute != null && currentRoute !in topLevelRoutes
-    val hideChrome = currentRoute == Routes.GRAY_CARD || currentRoute == Routes.SPIRIT_LEVEL
+    val chromeHiddenRoutes = setOf(
+        Routes.GRAY_CARD,
+        Routes.SPIRIT_LEVEL,
+        Routes.COMPOSITION_OVERLAYS,
+    )
+    val hideChrome = currentRoute in chromeHiddenRoutes
 
     Scaffold(
         topBar = {
@@ -152,6 +158,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.GRAY_CARD) {
                 GrayCardScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.COMPOSITION_OVERLAYS) {
+                CompositionOverlayScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.MACRO) {
                 MacroScreen()

@@ -1,8 +1,6 @@
 package com.janhorak.shutterdeck.metering.presentation
 
 import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -45,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -66,6 +63,7 @@ import com.janhorak.shutterdeck.metering.domain.ShootingAidAssessmentLevel
 import com.janhorak.shutterdeck.metering.domain.StabilizationMode
 import com.janhorak.shutterdeck.metering.domain.SubjectMotionProfile
 import com.janhorak.shutterdeck.metering.domain.WorkflowPriority
+import com.janhorak.shutterdeck.ui.camera.isCameraPermissionGranted
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -1396,8 +1394,4 @@ private fun ExposureStepControl(
             }
         }
     }
-}
-
-private fun isCameraPermissionGranted(context: Context): Boolean {
-    return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 }

@@ -16,13 +16,14 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**16 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**17 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
 10. Equivalent Exposure · 11. Macro / Extension · 12. Diffraction Limit ·
 13. Golden Hour (sun times) · 14. Sun & Moon position + moon phase ·
-15. Spirit Level / horizon · 16. Gray Card / white-balance reference.
+15. Spirit Level / horizon · 16. Gray Card / white-balance reference ·
+17. Composition Overlays / framing guides.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -113,6 +114,14 @@ adds a full-screen bubble level with numeric pitch/roll readouts, `SpiritLevelSe
 prefers the gravity sensor and falls back to the accelerometer, and the screen locks portrait while
 active so the tilt math can stay simple and correct instead of remapping every display rotation.
 
+That full-screen utility group now also includes **Composition Overlays**. The new
+`utilities/presentation/CompositionOverlayScreen.kt` opens a dedicated immersive CameraX preview
+tool with rule-of-thirds, golden-ratio, and corner-to-corner diagonal guides drawn over the live
+preview. The camera binding logic now lives in shared `ui/camera/BackCameraPreview.kt`, which keeps
+`PreviewView` in `COMPATIBLE` mode for Compose overlay correctness and unbinds only its own
+`Preview` use case so future multi-use-case camera tools (like histogram/zebra) can reuse the same
+preview path safely. Shared camera permission checks now live in `ui/camera/CameraPermissionUtil.kt`.
+
 Structured date/time entry now also uses shared picker-backed controls wherever the app expects a
 real formatted date or time. `planner/presentation/ShootsScreen.kt`, the Gear purchase /
 maintenance / loan / battery / card editors, `FilmRollsScreen.kt`, `FilmRollDetailScreen.kt`,
@@ -174,16 +183,19 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 - `MainActivity.kt`, `ShutterDeckApp.kt` (`@HiltAndroidApp`), `AppViewModel.kt` (theme).
 - `navigation/` — `Routes`, `TopLevelDestination`, `titleForRoute()` (Destinations.kt);
   `ShutterDeckRoot.kt` (Scaffold + bottom nav + `NavHost`, plus per-route chrome suppression for
-  full-screen reference screens).
+  full-screen reference/camera utility screens).
 - `home/HomeScreen.kt` — the sectioned Tools grid (`toolSections`).
-- `ui/effects/` — `KeepScreenOn`, `LockPortraitOrientation`, `ReferenceDisplayMode`
-  (full-screen tool/session effects for calibration and sensor screens).
-- `utilities/domain/` — `GrayCardReference` + `SpiritLevelMath`
-  (gamma-correct reference presets plus pure tilt math for Spirit Level).
+- `ui/effects/` — `KeepScreenOn`, `LockPortraitOrientation`, `ImmersiveScreenMode`,
+  `ReferenceDisplayMode` (full-screen tool/session effects for camera, calibration, and sensor
+  screens).
+- `ui/camera/` — `BackCameraPreview` (shared back-camera preview binding for metering and
+  composition overlays), `CameraPermissionUtil` (shared camera-permission check).
+- `utilities/domain/` — `GrayCardReference`, `SpiritLevelMath`, `CompositionOverlayGuides`
+  (gamma-correct reference presets, pure tilt math, and normalized overlay-guide geometry).
 - `utilities/data/` — `SpiritLevelSensorRepository` (gravity-sensor primary, accelerometer
   fallback).
-- `utilities/presentation/` — `GrayCardScreen`, `SpiritLevelScreen`, `SpiritLevelViewModel`
-  (full-screen On-Shoot Utilities).
+- `utilities/presentation/` — `GrayCardScreen`, `SpiritLevelScreen`, `SpiritLevelViewModel`,
+  `CompositionOverlayScreen` (full-screen On-Shoot Utilities).
 - `core/time/` — `StructuredDateTime` (shared ISO date / time / timestamp parse-format helpers for
   picker-backed inputs across Gear, Film, Planner, and astronomy tools).
 - `ui/components/` — `PickerFields` (shared Compose date/time/date-time picker buttons + dialogs,
@@ -266,7 +278,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 146 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 149 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -329,7 +341,7 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 7 quick wins (U5):** composition overlays on the CameraX preview.
+1. **Phase 7 quick wins (U4):** live histogram & zebra on the shared CameraX preview path.
 2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
 3. **Phase 6/7 backlog** — business and on-shoot utilities remain the next broad feature area

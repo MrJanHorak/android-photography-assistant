@@ -21,7 +21,7 @@ later phases depend on the Phase 0 foundation.
 **Status:** Phase 0 (foundation) ✅, Phase 1 meter polish ✅, Phase 2 (all 11 calculators C1–C11) ✅,
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅,
 Phase 4 Gear G1–G7 ✅, Phase 5 **FL1–FL5 film suite** ✅, and Phase 7 **U1 Spirit level** +
-**U3 Gray-card / white-balance screen** ✅.
+**U3 Gray-card / white-balance screen** + **U5 Composition overlays** ✅.
 The **Tools** grid is now sectioned for scanability, the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
 battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export,
@@ -29,23 +29,26 @@ and the new **Film** tab now provides a Room-backed stock library, roll logger, 
 push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now complete too:
 `LightMeterScreen.kt` delegates shooting-aid state, workflow coaching, nearest-option matching,
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
-tests. The new **On-Shoot Utilities** section now adds both **Spirit Level** and **Gray Card**:
-full-screen field tools with hidden app chrome, keep-awake display behavior, and dedicated
-sensor/reference UIs for on-shoot use. Structured date/time entry is now picker-backed across the
-confirmed hard-formatted surfaces too: planner shoot dates, gear purchase/maintenance/loan/support
-dates, film roll/frame timestamps, and the astronomy date/time inputs now share reusable picker
-components plus shared ISO/date-time formatting helpers, while freeform notes such as scouting
-"Best time" stay text.
+tests. The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
+**Composition Overlays**: dedicated full-screen tools with hidden app chrome, keep-awake behavior,
+and sensor/reference/camera-preview UIs for on-shoot use. The overlay tool reuses the shared
+CameraX preview path, draws rule-of-thirds / golden-ratio / corner-to-corner diagonal guides over
+the live preview, and keeps the preview path reusable for future histogram/zebra work. Structured
+date/time entry is now picker-backed across the confirmed hard-formatted surfaces too: planner
+shoot dates, gear purchase/maintenance/loan/support dates, film roll/frame timestamps, and the
+astronomy date/time inputs now share reusable picker components plus shared ISO/date-time
+formatting helpers, while freeform notes such as scouting "Best time" stay text.
 
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v15) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **146 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **149 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Phase 7 quick wins** now mainly narrow to composition overlays on the CameraX preview.
+1. **Phase 7 quick wins** now mainly narrow to the remaining CameraX-preview follow-through:
+   live histogram + zebra.
 2. **Phase 6/7 utility backlog** is still open: business and on-shoot helpers remain the next
    broad expansion area now that planner, gear, film, and calculator foundations are stable.
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
@@ -322,7 +325,11 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   route that hides app chrome, keeps the display awake, forces max screen brightness while open,
   and swaps between gamma-correct 18% gray, white, and black reference presets.
 - **[U4] Live histogram & zebra.** From the CameraX preview already in the app.
-- **[U5] Composition overlays.** Rule-of-thirds, golden ratio, diagonals over preview.
+- **[U5] Composition overlays. ✅** Rule-of-thirds, golden ratio, diagonals over preview.
+  *Update:* the Tools grid now links to a dedicated full-screen composition-overlay route that
+  reuses the shared back-camera preview path, keeps the screen awake, hides app chrome, and lets
+  photographers swap between rule-of-thirds, golden-ratio, and corner-to-corner diagonal guides
+  drawn over the live CameraX preview.
 - **[U6] Digital slate / clapperboard.** For video/hybrid shooters.
 - **[U7] Voice/quick notes per shot.** Fast field notes tied to time/location.
 - **[U8] Lighting-setup diagrammer.** Place lights/subject/camera; save/share diagrams.
@@ -370,7 +377,7 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 7 quick wins** — CameraX composition overlays.
+5. **NEXT → Phase 7 quick wins** — live histogram & zebra on the shared CameraX preview path.
 6. **Phase 6/7** — business + on-shoot utilities as the app matures.
 7. **Phase 8** — formalize the KMP `shared` module once feature breadth stabilizes.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.
