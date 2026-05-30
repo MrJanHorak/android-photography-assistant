@@ -19,8 +19,10 @@ import androidx.room.RoomDatabase
         GearKitItemEntity::class,
         GearMaintenanceEntryEntity::class,
         FilmStockEntity::class,
+        FilmRollEntity::class,
+        FilmFrameEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,4 +37,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gearKitDao(): GearKitDao
     abstract fun gearMaintenanceDao(): GearMaintenanceDao
     abstract fun filmStockDao(): FilmStockDao
+    abstract fun filmRollDao(): FilmRollDao
 }

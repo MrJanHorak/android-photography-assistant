@@ -34,7 +34,10 @@ import com.janhorak.shutterdeck.calculators.presentation.PrintSizeScreen
 import com.janhorak.shutterdeck.calculators.presentation.Sunny16Screen
 import com.janhorak.shutterdeck.calculators.presentation.SunMoonPositionScreen
 import com.janhorak.shutterdeck.calculators.presentation.SunTimesScreen
+import com.janhorak.shutterdeck.film.presentation.FilmDevelopmentScreen
 import com.janhorak.shutterdeck.film.presentation.FilmScreen
+import com.janhorak.shutterdeck.film.presentation.FilmRollDetailScreen
+import com.janhorak.shutterdeck.film.presentation.FilmRollsScreen
 import com.janhorak.shutterdeck.film.presentation.FilmStocksScreen
 import com.janhorak.shutterdeck.gear.presentation.GearInventoryScreen
 import com.janhorak.shutterdeck.home.HomeScreen
@@ -170,6 +173,18 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.FILM_STOCKS) {
                 FilmStocksScreen()
+            }
+            composable(Routes.FILM_ROLLS) {
+                FilmRollsScreen(onOpenRoll = { rollId -> navController.navigate(Routes.filmRollDetailRoute(rollId)) })
+            }
+            composable(Routes.FILM_DEVELOPMENT) {
+                FilmDevelopmentScreen()
+            }
+            composable(
+                route = Routes.FILM_ROLL_DETAIL,
+                arguments = listOf(navArgument(Routes.FILM_ROLL_ID_ARG) { type = NavType.LongType }),
+            ) {
+                FilmRollDetailScreen()
             }
             composable(Routes.MORE) {
                 SettingsScreen()

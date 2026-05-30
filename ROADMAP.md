@@ -27,16 +27,17 @@ battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and
 and the new **Film** tab now provides a Room-backed stock library seeded from bundled JSON plus
 editable custom stocks.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v11) + DataStore,
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v12) + DataStore,
   core-library desugaring for `java.time`, CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10,
   Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **95 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **102 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Phase 5 film suite continues with FL2 roll & frame logging** — FL1 film stocks landed,
-   so the next highest-value step is tying rolls and frame logs to the new stock library.
+1. **Phase 5 film suite continues with FL4 push/pull guidance** — FL1 film stocks, FL2 roll
+   logging, and FL3 development tools landed, so the next highest-value step is stock-aware
+   push/pull recommendations tied to the existing film metadata and roll workflow.
 2. **Light-meter business logic** still partly in `LightMeterScreen.kt` (not fully in domain).
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
@@ -226,11 +227,19 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   processing type, optional reciprocity exponent/start threshold, push/pull latitude, description
   and development notes. The Sunny 16 reciprocity helper now accepts a stock-specific onset
   threshold instead of assuming reciprocity always begins at 1 second.
-- **[FL2] Roll & frame logger.** Per roll: stock, ISO, camera, lens; per frame:
-  aperture/shutter/focal/notes/GPS/time (digital "EXIF" for film).
-  *Acceptance:* start roll, log frames, finish roll, review log; export.
-- **[FL3] Development timer + dilution calculator.** Step timers with agitation cues,
-  dilution math, temperature compensation (e.g. Ilford/massive-dev style).
+- **[FL2] Roll & frame logger. ✅** The Film tab now includes a Room-backed roll library and
+  per-roll detail log (`FilmRollEntity` / `FilmFrameEntity`). Rolls snapshot stock display data,
+  format/type/processing, ISO and reciprocity fields so history survives later stock edits; each
+  roll also tracks exposure index, optional frame capacity, camera, lens, notes and active/finished
+  status. Frames track frame number plus exposure sequence for double exposures, aperture, shutter,
+  focal length, timestamp, optional GPS and notes. Users can start/edit/delete rolls, finish or
+  reopen them, log/edit/delete frames, and export a single-roll CSV via SAF.
+- **[FL3] Development timer + dilution calculator. ✅** The Film tab now includes a dedicated
+  development screen with optional saved-roll context, a 1+N dilution calculator, temperature
+  compensation for developer time at 16–26C, and a guided fixed-step timer (pre-soak, developer,
+  stop bath, fixer, wash) with recurring agitation cues and pause/resume/reset controls. The live
+  countdown stays pinned at the top of the screen while recipe inputs scroll below it, and timer
+  sessions are restored via `SavedStateHandle` if the process is recreated mid-run.
 - **[FL4] Push/pull helper.** Adjust dev time/notes for pushed/pulled stocks.
 - **[FL5] Reciprocity correction.** Auto-correct long film exposures by stock (links C6).
 
@@ -301,7 +310,8 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 5 film suite**: build **FL2 roll & frame logger** on top of the new Film Stocks library.
+5. **NEXT → Phase 5 film suite**: build **FL4 push/pull helper** on top of the new Film stocks,
+   roll logging, and development-tool foundation.
 6. **Phase 1 meter polish** (move remaining `LightMeterScreen.kt` logic into `domain`).
 7. **Phase 6/7** — business + on-shoot utilities as the app matures.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.

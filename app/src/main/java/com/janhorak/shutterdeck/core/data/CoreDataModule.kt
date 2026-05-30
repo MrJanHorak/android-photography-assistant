@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.janhorak.shutterdeck.core.data.db.AppDatabase
+import com.janhorak.shutterdeck.core.data.db.FilmRollDao
 import com.janhorak.shutterdeck.core.data.db.FilmStockDao
 import com.janhorak.shutterdeck.core.data.db.GearBatteryDao
 import com.janhorak.shutterdeck.core.data.db.GearFilterDao
@@ -75,4 +76,7 @@ object CoreDataModule {
 
     @Provides
     fun provideFilmStockDao(database: AppDatabase): FilmStockDao = database.filmStockDao()
+
+    @Provides
+    fun provideFilmRollDao(database: AppDatabase): FilmRollDao = database.filmRollDao()
 }

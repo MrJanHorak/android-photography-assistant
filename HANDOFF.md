@@ -14,7 +14,7 @@ Package root: `com.janhorak.shutterdeck`
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
-**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library), **More** (settings/theme).
+**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer), **More** (settings/theme).
 
 **14 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
@@ -33,6 +33,20 @@ type, ISO, processing type, optional reciprocity exponent/start threshold, optio
 latitude, description and development notes. The screen supports search, source/format/type filters,
 and custom add/edit/delete flows. `Sunny16.kt` now accepts a stock-specific reciprocity onset
 threshold instead of hard-coding 1 second.
+
+**FL2 Roll & frame logger** is also live. `FilmRollEntity` snapshots stock metadata (display name,
+format, type, processing, base ISO, reciprocity fields) onto each roll so history/export survives
+later stock edits or deletes, while `FilmFrameEntity` stores frame number + exposure sequence,
+aperture, shutter speed, focal length, capture time, optional GPS and notes. The Film hub links to
+a roll list and per-roll detail screen where users can start/edit/delete rolls, finish/reopen them,
+log/edit/delete frames, and export a single-roll CSV through Android's document picker.
+
+**FL3 Development timer + dilution calculator** is now live as well. The Film hub links to a
+dedicated darkroom screen with an optional saved-roll context selector, a 1+N dilution calculator,
+20C-based developer time compensation across 16–26C, and a guided fixed-step recipe timer
+(pre-soak, developer, stop bath, fixer, wash). The timer shows recurring agitation cues, supports
+pause/resume/reset, keeps the live countdown pinned above the scrollable form, and restores an
+active session from `SavedStateHandle` if the process is recreated while a recipe is running.
 
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
@@ -64,9 +78,9 @@ threshold instead of hard-coding 1 second.
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v11) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v12) + DataStore (Preferences) for theme/settings.
 This build still uses `fallbackToDestructiveMigration(dropAllTables = true)`, so upgrading from
-v10 to v11 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
+v11 to v12 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
 gear and film records after install.
 
 ---
@@ -90,7 +104,12 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 - `home/HomeScreen.kt` — the sectioned Tools grid (`toolSections`).
 - `film/data/` — `FilmStockCatalogLoader` (bundled JSON parser/fallback loader),
   `FilmStockRepository` (seed bundled starter stocks into Room, enforce read-only built-ins).
-- `film/presentation/` — `FilmScreen` (hub), `FilmStocksScreen`, `FilmStocksViewModel`.
+- `film/domain/` — `FilmRollExport` (pure CSV export + filename helpers), `FilmRollLog`
+  (roll statuses, default timestamps), `FilmDevelopment` (dilution math, temperature compensation,
+  agitation cues, fixed recipe-step builder).
+- `film/presentation/` — `FilmScreen` (hub), `FilmStocksScreen`, `FilmStocksViewModel`,
+  `FilmRollsScreen`, `FilmRollsViewModel`, `FilmRollDetailScreen`, `FilmRollDetailViewModel`,
+  `FilmDevelopmentScreen`, `FilmDevelopmentViewModel`.
 - `gear/presentation/` — `GearInventoryScreen`, `GearInventoryViewModel`, `GearItemEditState`
   (inventory + filter + battery/card + loans + kits + maintenance summaries),
   `GearFilterTrackerSection.kt`, `GearSupportTrackerSection.kt`, `GearLoanTrackerSection.kt`,
@@ -111,6 +130,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `GearBatteryEntity` / `GearBatteryDao`, `GearMemoryCardEntity` / `GearMemoryCardDao`,
   `GearLoanEntity` / `GearLoanDao`,
   `FilmStockEntity` / `FilmStockDao`,
+  `FilmRollEntity` / `FilmFrameEntity` / `FilmRollDao`,
   `GearKitEntity` / `GearKitItemEntity` / `GearKitDao`, and
   `GearMaintenanceEntryEntity` / `GearMaintenanceDao`).
 - `ui/components/` — `ToolCard`, `ResultRow`, `SectionHeader`, `LabeledField`,
@@ -146,7 +166,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 95 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 102 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -209,8 +229,8 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 5 Film suite (FL2/FL3)** — build the roll/frame logger on top of the new film stock
-   library, then add stock-aware development timers.
+1. **Phase 5 Film suite (FL4/FL5)** — add stock-aware push/pull guidance on top of the new film
+   stock + roll + development workflow, then deepen the reciprocity assistant.
 2. **Polish P3/P4** — link a shoot to a saved location; per-shot gear/notes; map view for
    locations; reference-photo attachments.
 3. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain.
@@ -243,6 +263,11 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 - Film stocks are stored in Room so future rolls can reference one stable ID path, but the bundled
   starter catalog is intentionally **read-only** inside the app. Users extend the library by adding
   custom rows; there is no JSON import/export path for film stocks yet.
+- Film rolls snapshot stock metadata instead of live-reading every field from `FilmStockEntity`, so
+  historical logs and CSV exports stay readable even if a linked stock changes later.
+- The FL3 development timer is intentionally **session-only** for now: recipe inputs are not saved
+  to Room, audio/haptic cues are not implemented yet, and temperature compensation currently follows
+  a built-in 16–26C chart with interpolation rather than a fully user-editable chemistry profile.
 - Built-in film reciprocity curves are **starter fits**, not authoritative datasheet replacements.
   Users should keep their own tested custom stock entries when their long-exposure notes differ.
 - Gear reference photos are stored as persisted document URI strings; the screen currently shows

@@ -23,12 +23,12 @@ private val filmTools = listOf(
     FilmEntry(
         title = "Roll Logger",
         subtitle = "Track rolls, frame counts and development state from the same stock library.",
-        route = null,
+        route = Routes.FILM_ROLLS,
     ),
     FilmEntry(
         title = "Development Timer",
         subtitle = "Reusable chemistry timers tied to your processing workflow.",
-        route = null,
+        route = Routes.FILM_DEVELOPMENT,
     ),
     FilmEntry(
         title = "Push / Pull Helper",

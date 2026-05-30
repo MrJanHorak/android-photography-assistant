@@ -33,6 +33,12 @@ object Routes {
     const val LOCATIONS = "locations"
     const val SHOOTS = "shoots"
     const val FILM_STOCKS = "filmstocks"
+    const val FILM_ROLLS = "filmrolls"
+    const val FILM_DEVELOPMENT = "filmdevelopment"
+    const val FILM_ROLL_ID_ARG = "filmRollId"
+    const val FILM_ROLL_DETAIL = "filmroll/{$FILM_ROLL_ID_ARG}"
+
+    fun filmRollDetailRoute(rollId: Long): String = "filmroll/$rollId"
 
     const val SHOOT_ID_ARG = "shootId"
     const val SHOOT_DETAIL = "shoot/{$SHOOT_ID_ARG}"
@@ -79,6 +85,9 @@ fun titleForRoute(route: String?): String = when {
         Routes.LOCATIONS -> "Scouting Locations"
         Routes.SHOOTS -> "Shoots"
         Routes.FILM_STOCKS -> "Film Stocks"
+        Routes.FILM_ROLLS -> "Roll Logger"
+        Routes.FILM_DEVELOPMENT -> "Development Timer"
+        Routes.FILM_ROLL_DETAIL -> "Roll Log"
         else -> "ShutterDeck"
     }
 }
