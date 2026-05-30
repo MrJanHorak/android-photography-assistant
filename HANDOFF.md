@@ -13,10 +13,10 @@ Package root: `com.janhorak.shutterdeck`
 
 ## 1. Project Snapshot (what works today)
 
-ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
-**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **More** (settings/theme).
+ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
+**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library), **More** (settings/theme).
 
-**14 working tools** (all reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**):
+**14 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
@@ -25,6 +25,14 @@ ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
+
+**Film tab** is now a hub for the film suite. **FL1 Film Stocks** is live: a Room-backed
+`FilmStockEntity` library seeded from `app/src/main/assets/film_stock_catalog.json`, with built-in
+read-only starter stocks and editable custom stocks in the same table. Each stock stores format,
+type, ISO, processing type, optional reciprocity exponent/start threshold, optional push/pull
+latitude, description and development notes. The screen supports search, source/format/type filters,
+and custom add/edit/delete flows. `Sunny16.kt` now accepts a stock-specific reciprocity onset
+threshold instead of hard-coding 1 second.
 
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
@@ -56,9 +64,10 @@ and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v10) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v11) + DataStore (Preferences) for theme/settings.
 This build still uses `fallbackToDestructiveMigration(dropAllTables = true)`, so upgrading from
-v9 to v10 wipes local Room data; reseed the gear catalog and recreate local planner/gear records after install.
+v10 to v11 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
+gear and film records after install.
 
 ---
 
@@ -79,6 +88,9 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 - `navigation/` — `Routes`, `TopLevelDestination`, `titleForRoute()` (Destinations.kt);
   `ShutterDeckRoot.kt` (Scaffold + bottom nav + `NavHost`).
 - `home/HomeScreen.kt` — the sectioned Tools grid (`toolSections`).
+- `film/data/` — `FilmStockCatalogLoader` (bundled JSON parser/fallback loader),
+  `FilmStockRepository` (seed bundled starter stocks into Room, enforce read-only built-ins).
+- `film/presentation/` — `FilmScreen` (hub), `FilmStocksScreen`, `FilmStocksViewModel`.
 - `gear/presentation/` — `GearInventoryScreen`, `GearInventoryViewModel`, `GearItemEditState`
   (inventory + filter + battery/card + loans + kits + maintenance summaries),
   `GearFilterTrackerSection.kt`, `GearSupportTrackerSection.kt`, `GearLoanTrackerSection.kt`,
@@ -98,6 +110,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `GearFilterEntity` / `GearFilterDao`,
   `GearBatteryEntity` / `GearBatteryDao`, `GearMemoryCardEntity` / `GearMemoryCardDao`,
   `GearLoanEntity` / `GearLoanDao`,
+  `FilmStockEntity` / `FilmStockDao`,
   `GearKitEntity` / `GearKitItemEntity` / `GearKitDao`, and
   `GearMaintenanceEntryEntity` / `GearMaintenanceDao`).
 - `ui/components/` — `ToolCard`, `ResultRow`, `SectionHeader`, `LabeledField`,
@@ -133,7 +146,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 91 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 95 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -196,8 +209,8 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 5 Film suite (FL1/FL2)** — film stock DB + roll/frame logger (Room). Phase 4 Gear is
-   complete through G7, so this is now the highest-value next block.
+1. **Phase 5 Film suite (FL2/FL3)** — build the roll/frame logger on top of the new film stock
+   library, then add stock-aware development timers.
 2. **Polish P3/P4** — link a shoot to a saved location; per-shot gear/notes; map view for
    locations; reference-photo attachments.
 3. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain.
@@ -227,6 +240,11 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 - Filter compatibility is **derived**, not hard-linked: `GearItemEntity.filterThreadSizeText`
   and `GearFilterEntity.threadSizeText` are normalized via a blank-safe helper so unfilled
   values never match each other by accident.
+- Film stocks are stored in Room so future rolls can reference one stable ID path, but the bundled
+  starter catalog is intentionally **read-only** inside the app. Users extend the library by adding
+  custom rows; there is no JSON import/export path for film stocks yet.
+- Built-in film reciprocity curves are **starter fits**, not authoritative datasheet replacements.
+  Users should keep their own tested custom stock entries when their long-exposure notes differ.
 - Gear reference photos are stored as persisted document URI strings; the screen currently shows
   attachment labels only, not thumbnails, and `GearInventoryViewModel` now owns URI-permission
   acquisition/release so replace, clear, and delete do not leak grants.

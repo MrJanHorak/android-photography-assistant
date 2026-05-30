@@ -19,22 +19,24 @@ later phases depend on the Phase 0 foundation.
 > `HANDOFF.md` for the authoritative current snapshot.
 
 **Status:** Phase 0 (foundation) ✅, Phase 2 (all 11 calculators C1–C11) ✅,
-Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅.
-The **Tools** grid is now sectioned for scanability, and the **Gear** tab has Room-backed
+Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅,
+Phase 4 Gear G1–G7 ✅, and Phase 5 **FL1 film stock database** ✅.
+The **Tools** grid is now sectioned for scanability, the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
-battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export.
-**14 tools** live across the **Tools** grid + **Planner** hub.
+battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export,
+and the new **Film** tab now provides a Room-backed stock library seeded from bundled JSON plus
+editable custom stocks.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v10) + DataStore,
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v11) + DataStore,
   core-library desugaring for `java.time`, CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10,
   Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **91 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **95 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Phase 5 film suite is the next major differentiator** — the Gear roadmap is complete
-   through G7, so the next highest-value feature area is film stock + roll/frame logging.
+1. **Phase 5 film suite continues with FL2 roll & frame logging** — FL1 film stocks landed,
+   so the next highest-value step is tying rolls and frame logs to the new stock library.
 2. **Light-meter business logic** still partly in `LightMeterScreen.kt` (not fully in domain).
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
@@ -69,7 +71,7 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
 ### Phase 0 — Foundation & cleanup (P0) ✅ COMPLETE
 
 > Done: package renamed to `com.janhorak.shutterdeck` (app "ShutterDeck"); Navigation
-> Compose shell with bottom nav (Tools/Planner/Gear/More) + home tool grid; Room +
+> Compose shell with bottom nav (Tools/Planner/Gear/Film/More) + home tool grid; Room +
 > DataStore wired via Hilt; OLED design system with cyan accent + night-vision red
 > theme (switchable from More); exposure math/formatting extracted to a pure-Kotlin
 > `metering/domain` with JVM unit tests; GitHub Actions CI running tests + assembleDebug.
@@ -217,8 +219,13 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
 
 ### Phase 5 — Film photography suite (P2; strong differentiator)
 
-- **[FL1] Film stock database.** ISO, format, reciprocity curve, dev notes. Bundled
-  JSON like the gear catalog, user-extendable.
+- **[FL1] Film stock database. ✅** The app now has a dedicated **Film** bottom-nav hub and a
+  **Film Stocks** screen backed by Room `FilmStockEntity` rows. A bundled
+  `film_stock_catalog.json` starter catalog is seeded into read-only built-in rows, custom stocks
+  live in the same table with stable string IDs, and each stock can store ISO, format, stock type,
+  processing type, optional reciprocity exponent/start threshold, push/pull latitude, description
+  and development notes. The Sunny 16 reciprocity helper now accepts a stock-specific onset
+  threshold instead of assuming reciprocity always begins at 1 second.
 - **[FL2] Roll & frame logger.** Per roll: stock, ISO, camera, lens; per frame:
   aperture/shutter/focal/notes/GPS/time (digital "EXIF" for film).
   *Acceptance:* start roll, log frames, finish roll, review log; export.
@@ -293,10 +300,9 @@ Quick reference grab-bag to pull future tasks from:
 1. ~~**Phase 0 (F1–F6)** — foundation.~~ ✅ DONE
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
-4. **NEXT → Finish Phase 4 Gear**: photo/richer metadata, then loan/rental + insurance/export
-   support to turn the Gear tab into the real \"track everything\" backbone.
-5. **Phase 1 meter polish** (move remaining `LightMeterScreen.kt` logic into `domain`).
-6. **Phase 5 film suite** — strong differentiator if you shoot film.
+4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
+5. **NEXT → Phase 5 film suite**: build **FL2 roll & frame logger** on top of the new Film Stocks library.
+6. **Phase 1 meter polish** (move remaining `LightMeterScreen.kt` logic into `domain`).
 7. **Phase 6/7** — business + on-shoot utilities as the app matures.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.
 

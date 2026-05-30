@@ -31,13 +31,18 @@ fun sunny16ShutterSeconds(iso: Int, aperture: Double, stopsDarkerThanSunny: Doub
 
 /**
  * Reciprocity-corrected exposure (seconds) for film using the common power law
- * t_corrected = t_metered ^ exponent, applied only when t_metered > 1s.
+ * t_corrected = t_metered ^ exponent, applied only when t_metered exceeds the
+ * stock's reciprocity onset threshold.
  * exponent 1.0 means no correction (typical digital).
  */
-fun reciprocityCorrectedSeconds(meteredSeconds: Double, exponent: Double): Double? {
-    if (!meteredSeconds.isFinite() || !exponent.isFinite()) return null
-    if (meteredSeconds <= 0 || exponent <= 0) return null
-    return if (meteredSeconds <= 1.0) meteredSeconds else meteredSeconds.pow(exponent)
+fun reciprocityCorrectedSeconds(
+    meteredSeconds: Double,
+    exponent: Double,
+    onsetSeconds: Double = 1.0,
+): Double? {
+    if (!meteredSeconds.isFinite() || !exponent.isFinite() || !onsetSeconds.isFinite()) return null
+    if (meteredSeconds <= 0 || exponent <= 0 || onsetSeconds <= 0) return null
+    return if (meteredSeconds <= onsetSeconds) meteredSeconds else meteredSeconds.pow(exponent)
 }
 
 /** Additional stops of compensation implied by a reciprocity correction. */

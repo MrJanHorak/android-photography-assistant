@@ -31,8 +31,15 @@ class Sunny16Test {
     }
 
     @Test
+    fun reciprocity_respectsCustomOnset() {
+        assertEquals(2.0, reciprocityCorrectedSeconds(2.0, 1.3, onsetSeconds = 4.0)!!, 1e-9)
+        assertEquals(Math.pow(8.0, 1.3), reciprocityCorrectedSeconds(8.0, 1.3, onsetSeconds = 4.0)!!, 1e-6)
+    }
+
+    @Test
     fun invalidInputsReturnNull() {
         assertNull(sunny16ShutterSeconds(0, 16.0, 0.0))
         assertNull(reciprocityCorrectedSeconds(0.0, 1.3))
+        assertNull(reciprocityCorrectedSeconds(2.0, 1.3, onsetSeconds = 0.0))
     }
 }

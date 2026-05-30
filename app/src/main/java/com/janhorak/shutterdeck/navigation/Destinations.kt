@@ -3,6 +3,7 @@ package com.janhorak.shutterdeck.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -12,6 +13,7 @@ object Routes {
     const val TOOLS = "tools"
     const val PLANNER = "planner"
     const val GEAR = "gear"
+    const val FILM = "film"
     const val MORE = "more"
 
     const val LIGHT_METER = "lightmeter"
@@ -30,6 +32,7 @@ object Routes {
     const val SUN_MOON_POSITION = "sunmoonposition"
     const val LOCATIONS = "locations"
     const val SHOOTS = "shoots"
+    const val FILM_STOCKS = "filmstocks"
 
     const val SHOOT_ID_ARG = "shootId"
     const val SHOOT_DETAIL = "shoot/{$SHOOT_ID_ARG}"
@@ -46,6 +49,7 @@ enum class TopLevelDestination(
     TOOLS(Routes.TOOLS, "Tools", Icons.Filled.Home),
     PLANNER(Routes.PLANNER, "Planner", Icons.Filled.DateRange),
     GEAR(Routes.GEAR, "Gear", Icons.AutoMirrored.Filled.List),
+    FILM(Routes.FILM, "Film", Icons.Filled.Edit),
     MORE(Routes.MORE, "More", Icons.Filled.Settings),
 }
 
@@ -56,6 +60,7 @@ fun titleForRoute(route: String?): String = when {
     else -> when (route) {
         Routes.PLANNER -> "Planner"
         Routes.GEAR -> "Gear"
+        Routes.FILM -> "Film"
         Routes.MORE -> "More"
         Routes.LIGHT_METER -> "Light Meter"
         Routes.DEPTH_OF_FIELD -> "Depth of Field"
@@ -73,6 +78,7 @@ fun titleForRoute(route: String?): String = when {
         Routes.SUN_MOON_POSITION -> "Sun & Moon Position"
         Routes.LOCATIONS -> "Scouting Locations"
         Routes.SHOOTS -> "Shoots"
+        Routes.FILM_STOCKS -> "Film Stocks"
         else -> "ShutterDeck"
     }
 }

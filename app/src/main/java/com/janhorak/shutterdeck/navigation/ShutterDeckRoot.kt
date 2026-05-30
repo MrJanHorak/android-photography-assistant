@@ -34,6 +34,8 @@ import com.janhorak.shutterdeck.calculators.presentation.PrintSizeScreen
 import com.janhorak.shutterdeck.calculators.presentation.Sunny16Screen
 import com.janhorak.shutterdeck.calculators.presentation.SunMoonPositionScreen
 import com.janhorak.shutterdeck.calculators.presentation.SunTimesScreen
+import com.janhorak.shutterdeck.film.presentation.FilmScreen
+import com.janhorak.shutterdeck.film.presentation.FilmStocksScreen
 import com.janhorak.shutterdeck.gear.presentation.GearInventoryScreen
 import com.janhorak.shutterdeck.home.HomeScreen
 import com.janhorak.shutterdeck.metering.presentation.LightMeterScreen
@@ -162,6 +164,12 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.GEAR) {
                 GearInventoryScreen()
+            }
+            composable(Routes.FILM) {
+                FilmScreen(onOpen = { route -> navController.navigate(route) })
+            }
+            composable(Routes.FILM_STOCKS) {
+                FilmStocksScreen()
             }
             composable(Routes.MORE) {
                 SettingsScreen()
