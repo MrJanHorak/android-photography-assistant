@@ -13,6 +13,9 @@ import com.janhorak.shutterdeck.calculators.domain.calculateSunTimes
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.ResultRow
 import com.janhorak.shutterdeck.ui.components.SectionHeader
+import com.janhorak.shutterdeck.ui.location.CurrentLocationAction
+import com.janhorak.shutterdeck.ui.location.formatCoordinateInput
+import com.janhorak.shutterdeck.ui.location.rememberCurrentLocationRequestState
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -30,6 +33,13 @@ fun SunTimesScreen(modifier: Modifier = Modifier) {
     var month by rememberInput(today.monthValue.toString())
     var day by rememberInput(today.dayOfMonth.toString())
     var utcOffset by rememberInput(formatOneDecimal(defaultOffsetHours))
+    val currentLocationState = rememberCurrentLocationRequestState { coordinates ->
+        latitude = formatCoordinateInput(coordinates.latitude)
+        longitude = formatCoordinateInput(coordinates.longitude)
+        utcOffset = formatOneDecimal(
+            ZoneId.systemDefault().rules.getOffset(Instant.now()).totalSeconds / 3600.0,
+        )
+    }
 
     val lat = latitude.toDoubleOrNull()
     val lon = longitude.toDoubleOrNull()
@@ -55,6 +65,7 @@ fun SunTimesScreen(modifier: Modifier = Modifier) {
             LabeledField("Latitude", latitude, { latitude = it }, modifier = Modifier.weight(1f), suffix = "°")
             LabeledField("Longitude", longitude, { longitude = it }, modifier = Modifier.weight(1f), suffix = "°")
         }
+        CurrentLocationAction(state = currentLocationState)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             LabeledField("Year", year, { year = it }, modifier = Modifier.weight(1f))
             LabeledField("Month", month, { month = it }, modifier = Modifier.weight(1f))

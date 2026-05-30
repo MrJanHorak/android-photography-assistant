@@ -30,16 +30,17 @@ push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now com
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
 tests.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v12) + DataStore,
-  core-library desugaring for `java.time`, CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10,
-  Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v13) + DataStore,
+  core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
+  Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
 - **Validated:** `assembleDebug` green; **132 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
 1. **Planner polish (P3/P4)** still has useful follow-through work: richer per-shot notes/gear,
-   map view, and reference-photo attachments now that shoot-to-location linking is live.
+   map view, and reference-photo attachments now that shoot-to-location linking and
+   current-location autofill are live.
 2. **Phase 7 quick wins** remain attractive follow-ons: spirit level, gray-card screen, and
    composition overlays on the CameraX preview.
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
@@ -133,6 +134,12 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
   linked location context or a graceful "location removed" state. Remaining planner follow-through
   is richer per-shot notes/gear, a map view for locations, and reference-photo attachments.
 
+- **Location autofill progress (2026-05-30).** Manual coordinate entry now has a **Use current
+  location** path in `LocationsScreen.kt`, `SunTimesScreen.kt`, and `SunMoonPositionScreen.kt`.
+  `DeviceLocationProvider.kt` owns the one-shot fused-location lookup, and
+  `CurrentLocationUi.kt` centralizes permission, settings, and error-state handling so manual
+  latitude/longitude entry still works alongside phone-based autofill.
+
 - **[M1] Exposure recipe summary card.** Compact card combining shutter target,
   aperture, ISO, and the priority-based adjustment path. *Acceptance:* card shows a
   one-glance recommendation that updates with inputs.
@@ -186,11 +193,13 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   Foundation for a future AR/compass overlay.
 - **[P3] Saved locations / scouting. ✅** Room-backed CRUD: name, GPS, notes, best time.
   `LocationEntity`/`LocationDao`/`LocationsViewModel`/`LocationsScreen`.
-  *Still TODO (nice-to-have):* attached reference photos, map pin/map view.
+  *Update:* add/edit flows now support either manual coordinates or **Use current location** from
+  the phone. *Still TODO (nice-to-have):* attached reference photos, map pin/map view.
 - **[P4] Shot list / shoot planner. ✅** Room-backed: create a shoot, add/check/delete shots,
   progress count, cascade-delete. `ShootEntity`+`ShotItemEntity`/`ShootDao`/`ShootsViewModel`+
   `ShootDetailViewModel`/`ShootsScreen`+`ShootDetailScreen`.
-  *Still TODO (nice-to-have):* per-shot gear/notes fields, reorder, link a shoot to a location.
+  *Update:* shoots can now link to a saved scouting location. *Still TODO (nice-to-have):*
+  per-shot gear/notes fields and shot reordering.
 - **[P5] Weather snapshot (optional API).** Cloud cover, sun, precipitation for a
   location/time. Requires an API key + graceful offline degradation.
 - **[P6] Milky Way / astro season planner.** Galactic-core visibility windows by date

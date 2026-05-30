@@ -1,5 +1,7 @@
 package com.janhorak.shutterdeck.planner.presentation
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,6 +36,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.janhorak.shutterdeck.core.data.db.LocationEntity
 import com.janhorak.shutterdeck.ui.components.LabeledField
+import com.janhorak.shutterdeck.ui.location.CurrentLocationAction
+import com.janhorak.shutterdeck.ui.location.CurrentLocationRequestState
+import com.janhorak.shutterdeck.ui.location.formatCoordinateInput
+import com.janhorak.shutterdeck.ui.location.rememberCurrentLocationRequestState
+
+private data class LocationEditorState(
+    val id: Long = 0L,
+    val name: String = "",
+    val latitude: String = "",
+    val longitude: String = "",
+    val bestTime: String = "",
+    val notes: String = "",
+)
 
 @Composable
 fun LocationsScreen(
@@ -41,16 +56,35 @@ fun LocationsScreen(
     viewModel: LocationsViewModel = hiltViewModel(),
 ) {
     val locations by viewModel.locations.collectAsStateWithLifecycle()
-    var editing by remember { mutableStateOf<LocationEntity?>(null) }
-    var showDialog by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<LocationEditorState?>(null) }
+    val currentLocationState = rememberCurrentLocationRequestState { coordinates ->
+        editing = editing?.copy(
+            latitude = formatCoordinateInput(coordinates.latitude),
+            longitude = formatCoordinateInput(coordinates.longitude),
+        )
+    }
 
-    if (showDialog) {
+    if (editing != null) {
         LocationDialog(
-            initial = editing,
-            onDismiss = { showDialog = false },
-            onSave = { id, name, lat, lon, notes, bestTime ->
-                viewModel.save(id, name, lat, lon, notes, bestTime)
-                showDialog = false
+            state = editing!!,
+            currentLocationState = currentLocationState,
+            onDismiss = { editing = null },
+            onNameChange = { editing = editing?.copy(name = it) },
+            onLatitudeChange = { editing = editing?.copy(latitude = it) },
+            onLongitudeChange = { editing = editing?.copy(longitude = it) },
+            onBestTimeChange = { editing = editing?.copy(bestTime = it) },
+            onNotesChange = { editing = editing?.copy(notes = it) },
+            onSave = {
+                val current = editing ?: return@LocationDialog
+                viewModel.save(
+                    id = current.id,
+                    name = current.name,
+                    latitude = current.latitude.toDoubleOrNull(),
+                    longitude = current.longitude.toDoubleOrNull(),
+                    notes = current.notes,
+                    bestTime = current.bestTime,
+                )
+                editing = null
             },
         )
     }
@@ -62,7 +96,7 @@ fun LocationsScreen(
     ) {
         item {
             OutlinedButton(
-                onClick = { editing = null; showDialog = true },
+                onClick = { editing = LocationEditorState() },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
@@ -81,7 +115,7 @@ fun LocationsScreen(
         items(locations, key = { it.id }) { location ->
             LocationCard(
                 location = location,
-                onEdit = { editing = location; showDialog = true },
+                onEdit = { editing = location.toEditorState() },
                 onDelete = { viewModel.delete(location) },
             )
         }
@@ -134,45 +168,50 @@ private fun LocationCard(
 
 @Composable
 private fun LocationDialog(
-    initial: LocationEntity?,
+    state: LocationEditorState,
+    currentLocationState: CurrentLocationRequestState,
     onDismiss: () -> Unit,
-    onSave: (Long, String, Double?, Double?, String, String) -> Unit,
+    onNameChange: (String) -> Unit,
+    onLatitudeChange: (String) -> Unit,
+    onLongitudeChange: (String) -> Unit,
+    onBestTimeChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
+    onSave: () -> Unit,
 ) {
-    var name by remember { mutableStateOf(initial?.name ?: "") }
-    var latitude by remember { mutableStateOf(initial?.latitude?.toString() ?: "") }
-    var longitude by remember { mutableStateOf(initial?.longitude?.toString() ?: "") }
-    var bestTime by remember { mutableStateOf(initial?.bestTime ?: "") }
-    var notes by remember { mutableStateOf(initial?.notes ?: "") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Add location" else "Edit location") },
+        title = { Text(if (state.id == 0L) "Add location" else "Edit location") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledField("Name", name, { name = it }, keyboardType = KeyboardType.Text)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                LabeledField("Name", state.name, onNameChange, keyboardType = KeyboardType.Text)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledField("Latitude", latitude, { latitude = it }, modifier = Modifier.weight(1f), suffix = "°")
-                    LabeledField("Longitude", longitude, { longitude = it }, modifier = Modifier.weight(1f), suffix = "°")
+                    LabeledField("Latitude", state.latitude, onLatitudeChange, modifier = Modifier.weight(1f), suffix = "°")
+                    LabeledField("Longitude", state.longitude, onLongitudeChange, modifier = Modifier.weight(1f), suffix = "°")
                 }
-                LabeledField("Best time", bestTime, { bestTime = it }, keyboardType = KeyboardType.Text)
-                LabeledField("Notes", notes, { notes = it }, keyboardType = KeyboardType.Text, singleLine = false)
+                CurrentLocationAction(state = currentLocationState)
+                LabeledField("Best time", state.bestTime, onBestTimeChange, keyboardType = KeyboardType.Text)
+                LabeledField("Notes", state.notes, onNotesChange, keyboardType = KeyboardType.Text, singleLine = false)
             }
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    onSave(
-                        initial?.id ?: 0L,
-                        name,
-                        latitude.toDoubleOrNull(),
-                        longitude.toDoubleOrNull(),
-                        notes,
-                        bestTime,
-                    )
-                },
-                enabled = name.isNotBlank(),
+                onClick = onSave,
+                enabled = state.name.isNotBlank(),
             ) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
+
+private fun LocationEntity.toEditorState(): LocationEditorState =
+    LocationEditorState(
+        id = id,
+        name = name,
+        latitude = latitude?.let(::formatCoordinateInput) ?: "",
+        longitude = longitude?.let(::formatCoordinateInput) ?: "",
+        bestTime = bestTime,
+        notes = notes,
+    )

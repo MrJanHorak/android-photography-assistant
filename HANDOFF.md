@@ -75,6 +75,12 @@ clearing a saved location, the shoot list shows linked-location labels, and
 `ShootDetailScreen.kt` shows the linked location context (name, coordinates, best time, notes) or
 a graceful missing-location state if the saved location was removed later.
 
+Saved-location and astronomy coordinate entry now also support **Use current location** alongside
+manual entry. `LocationsScreen.kt`, `SunTimesScreen.kt`, and `SunMoonPositionScreen.kt` all share
+the same permission/settings/status flow via `ui/location/CurrentLocationUi.kt`, while
+`core/location/DeviceLocationProvider.kt` owns the one-shot fused-location lookup. The astronomy
+tools update UTC offset from the device timezone when current-location autofill is used.
+
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
@@ -105,9 +111,9 @@ a graceful missing-location state if the saved location was removed later.
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v12) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v13) + DataStore (Preferences) for theme/settings.
 This build still uses `fallbackToDestructiveMigration(dropAllTables = true)`, so upgrading from
-v11 to v12 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
+v12 to v13 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
 gear and film records after install.
 
 ---
@@ -158,6 +164,8 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `CalculatorInputState.kt` (`rememberInput`).
 - `planner/presentation/` — `PlannerScreen` (hub), `Locations*`, `Shoots*`,
   `ShootDetail*` (screens + `@HiltViewModel`s).
+- `core/location/` — `DeviceLocationProvider` (one-shot fused current-location lookup for
+  planner/calculator autofill).
 - `metering/` — the original light meter feature (data/domain/di/presentation).
 - `core/data/` — `SettingsRepository`, `CoreDataModule` (Hilt: DataStore + Room + DAOs),
   `db/` (`AppDatabase`, entities, DAOs incl. `GearItemEntity` / `GearItemDao`,
@@ -169,14 +177,16 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `GearKitEntity` / `GearKitItemEntity` / `GearKitDao`, and
   `GearMaintenanceEntryEntity` / `GearMaintenanceDao`).
 - `ui/components/` — `ToolCard`, `ResultRow`, `SectionHeader`, `LabeledField`,
-  `PlaceholderScreen`. `ui/theme/` — color/type/theme incl. NIGHT (red) mode.
+  `PlaceholderScreen`. `ui/location/` — reusable current-location permission/action UI.
+  `ui/theme/` — color/type/theme incl. NIGHT (red) mode.
 
 ---
 
 ## 3. Toolchain (known-good — do not change casually)
 - AGP `9.2.1` · Kotlin `2.2.10` · Compose BOM `2026.02.01` · Hilt `2.59.2`
   (via **KSP** `2.2.10-2.0.2`, not kapt) · Room `2.7.1` · Navigation `2.9.0` ·
-  DataStore `1.1.1` · Gradle wrapper `9.4.1` · minSdk 24 / targetSdk 36 / JDK 21.
+  DataStore `1.1.1` · Play Services location `21.3.0` · Gradle wrapper `9.4.1` ·
+  minSdk 24 / targetSdk 36 / JDK 21.
 - Versions are centralized in `gradle/libs.versions.toml`.
 - Do **not** apply `org.jetbrains.kotlin.android` (AGP built-in Kotlin is used).
 - `app/build.gradle.kts` now enables **core library desugaring** so existing `java.time`
@@ -264,8 +274,8 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Continue planner polish (P3/P4)** — build on the new shoot-to-location linking with richer
-   per-shot gear/notes, a map view for locations, and reference-photo attachments.
+1. **Continue planner polish (P3/P4)** — build on shoot linking + current-location autofill with
+   richer per-shot gear/notes, then map view/reference-photo follow-through for locations.
 2. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
    composition overlays on the CameraX preview.
 3. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
