@@ -51,11 +51,18 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.janhorak.shutterdeck.metering.domain.apertureGainStops
+import com.janhorak.shutterdeck.metering.domain.assessShootingAid
 import com.janhorak.shutterdeck.metering.domain.calculateHandheldMinimumShutterSeconds
+import com.janhorak.shutterdeck.metering.domain.availableStabilizationModes
 import com.janhorak.shutterdeck.metering.domain.formatDecimal
 import com.janhorak.shutterdeck.metering.domain.formatDuration
 import com.janhorak.shutterdeck.metering.domain.formatExposureTime
 import com.janhorak.shutterdeck.metering.domain.formatStopCount
+import com.janhorak.shutterdeck.metering.domain.matchingScenePreset
+import com.janhorak.shutterdeck.metering.domain.ScenePreset
+import com.janhorak.shutterdeck.metering.domain.ShootingAidAssessmentLevel
+import com.janhorak.shutterdeck.metering.domain.StabilizationMode
+import com.janhorak.shutterdeck.metering.domain.SubjectMotionProfile
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.log2
@@ -66,65 +73,6 @@ private enum class BodyCategoryFilter(val label: String, val category: CameraBod
     ALL("All bodies", null),
     DIGITAL("Digital", CameraBodyCategory.DIGITAL),
     MANUAL_FILM("Manual / film", CameraBodyCategory.MANUAL_FILM),
-}
-
-private enum class SubjectMotionProfile(
-    val label: String,
-    val description: String,
-    val minimumShutterSeconds: Double,
-) {
-    STILL(
-        label = "Still",
-        description = "Landscapes, architecture, and other mostly static subjects.",
-        minimumShutterSeconds = 1.0 / 30.0,
-    ),
-    PORTRAIT(
-        label = "Portrait",
-        description = "Human micro-movement and natural hand or face motion.",
-        minimumShutterSeconds = 1.0 / 125.0,
-    ),
-    WALKING(
-        label = "Walking",
-        description = "Casual movement, kids walking, or documentary motion.",
-        minimumShutterSeconds = 1.0 / 250.0,
-    ),
-    ACTION(
-        label = "Action",
-        description = "General sports, active children, or movement you want reasonably crisp.",
-        minimumShutterSeconds = 1.0 / 500.0,
-    ),
-    SPORTS(
-        label = "Sports",
-        description = "Fast motion where freezing the subject matters more than low ISO.",
-        minimumShutterSeconds = 1.0 / 1000.0,
-    ),
-}
-
-private enum class StabilizationMode(
-    val label: String,
-    val description: String,
-    val stopsBenefit: Float,
-) {
-    OFF(
-        label = "Off",
-        description = "No stabilization help; use the classic handheld rule of thumb.",
-        stopsBenefit = 0f,
-    ),
-    LENS_ONLY(
-        label = "Lens IS",
-        description = "Use the lens optical stabilizer only.",
-        stopsBenefit = 3f,
-    ),
-    BODY_ONLY(
-        label = "IBIS",
-        description = "Use in-body stabilization only.",
-        stopsBenefit = 3.5f,
-    ),
-    HYBRID(
-        label = "Lens + IBIS",
-        description = "Use coordinated optical and in-body stabilization.",
-        stopsBenefit = 5f,
-    ),
 }
 
 private enum class WorkflowPriority(
@@ -143,64 +91,6 @@ private enum class WorkflowPriority(
         label = "Shutter first",
         description = "Set a safe shutter target first and let the app show what ISO or aperture that requires.",
     ),
-}
-
-private enum class ScenePreset(
-    val label: String,
-    val description: String,
-    val subjectMotionProfile: SubjectMotionProfile?,
-    private val stabilizationPreferenceOrder: List<StabilizationMode>,
-) {
-    CUSTOM(
-        label = "Custom",
-        description = "Keep your manual subject-motion and stabilization choices.",
-        subjectMotionProfile = null,
-        stabilizationPreferenceOrder = emptyList(),
-    ),
-    TRIPOD(
-        label = "Tripod",
-        description = "Static scenes on support. Stabilization is disabled and motion assumptions stay conservative.",
-        subjectMotionProfile = SubjectMotionProfile.STILL,
-        stabilizationPreferenceOrder = listOf(StabilizationMode.OFF),
-    ),
-    NIGHT_STREET(
-        label = "Night street",
-        description = "Walking people, available light, and as much stabilization as the kit can offer.",
-        subjectMotionProfile = SubjectMotionProfile.WALKING,
-        stabilizationPreferenceOrder = listOf(
-            StabilizationMode.HYBRID,
-            StabilizationMode.BODY_ONLY,
-            StabilizationMode.LENS_ONLY,
-            StabilizationMode.OFF,
-        ),
-    ),
-    WILDLIFE(
-        label = "Wildlife",
-        description = "Fast subject motion with long lenses. The preset keeps the shutter bias aggressive.",
-        subjectMotionProfile = SubjectMotionProfile.SPORTS,
-        stabilizationPreferenceOrder = listOf(
-            StabilizationMode.HYBRID,
-            StabilizationMode.LENS_ONLY,
-            StabilizationMode.BODY_ONLY,
-            StabilizationMode.OFF,
-        ),
-    ),
-    INDOOR_EVENT(
-        label = "Indoor event",
-        description = "People movement in low light, with stabilization enabled whenever the gear supports it.",
-        subjectMotionProfile = SubjectMotionProfile.PORTRAIT,
-        stabilizationPreferenceOrder = listOf(
-            StabilizationMode.HYBRID,
-            StabilizationMode.BODY_ONLY,
-            StabilizationMode.LENS_ONLY,
-            StabilizationMode.OFF,
-        ),
-    );
-
-    fun resolveStabilizationMode(availableModes: List<StabilizationMode>): StabilizationMode? {
-        return stabilizationPreferenceOrder.firstOrNull { mode -> mode in availableModes }
-            ?: availableModes.firstOrNull()
-    }
 }
 
 @Composable
@@ -288,15 +178,20 @@ fun LightMeterScreen(
     val focalLengthMm = remember(lens, selectedFocalLengthMm) { lens.clampFocalLength(selectedFocalLengthMm) }
     val apertureOptions = remember(lens, stopMode, focalLengthMm) { lens.filterApertures(stopMode.apertureOptions, focalLengthMm) }
     val isoOptions = remember(body, stopMode) { body.filterIsos(stopMode.isoOptions) }
-    val availableStabilizationModes = remember(body, lens) { availableStabilizationModes(body, lens) }
-    val stabilizationMode = remember(stabilizationModeName, availableStabilizationModes) {
-        availableStabilizationModes.firstOrNull { it.name == stabilizationModeName } ?: availableStabilizationModes.first()
+    val supportedStabilizationModes = remember(body, lens) {
+        availableStabilizationModes(
+            hasLensStabilization = lens.hasOpticalStabilization,
+            hasBodyStabilization = body.hasInBodyStabilization,
+        )
     }
-    val scenePreset = remember(subjectMotionProfile, stabilizationMode, availableStabilizationModes) {
+    val stabilizationMode = remember(stabilizationModeName, supportedStabilizationModes) {
+        supportedStabilizationModes.firstOrNull { it.name == stabilizationModeName } ?: supportedStabilizationModes.first()
+    }
+    val scenePreset = remember(subjectMotionProfile, stabilizationMode, supportedStabilizationModes) {
         matchingScenePreset(
             subjectMotionProfile = subjectMotionProfile,
             stabilizationMode = stabilizationMode,
-            availableModes = availableStabilizationModes,
+            availableModes = supportedStabilizationModes,
         )
     }
 
@@ -319,9 +214,9 @@ fun LightMeterScreen(
         }
     }
 
-    LaunchedEffect(availableStabilizationModes, stabilizationMode.name) {
-        if (availableStabilizationModes.none { it.name == stabilizationMode.name }) {
-            stabilizationModeName = availableStabilizationModes.first().name
+    LaunchedEffect(supportedStabilizationModes, stabilizationMode.name) {
+        if (supportedStabilizationModes.none { it.name == stabilizationMode.name }) {
+            stabilizationModeName = supportedStabilizationModes.first().name
         }
     }
 
@@ -571,7 +466,7 @@ fun LightMeterScreen(
             subjectMotionProfile = subjectMotionProfile,
             stabilizationMode = stabilizationMode,
             workflowPriority = workflowPriority,
-            availableStabilizationModes = availableStabilizationModes,
+            availableStabilizationModes = supportedStabilizationModes,
             handheldMinimumShutterSeconds = handheldMinimumShutterSeconds,
             motionMinimumShutterSeconds = motionMinimumShutterSeconds,
             recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
@@ -582,7 +477,7 @@ fun LightMeterScreen(
                 preset.subjectMotionProfile?.let { profile ->
                     subjectMotionProfileName = profile.name
                 }
-                preset.resolveStabilizationMode(availableStabilizationModes)?.let { mode ->
+                preset.resolveStabilizationMode(supportedStabilizationModes)?.let { mode ->
                     stabilizationModeName = mode.name
                 }
             },
@@ -1003,7 +898,7 @@ private fun ShootingAidCard(
     onWorkflowPrioritySelected: (WorkflowPriority) -> Unit,
 ) {
     val assessment = remember(measuredShutterSeconds, recommendedMinimumShutterSeconds, subjectMotionProfile, stabilizationMode) {
-        buildShootingAidAssessment(
+        assessShootingAid(
             measuredShutterSeconds = measuredShutterSeconds,
             recommendedMinimumShutterSeconds = recommendedMinimumShutterSeconds,
             subjectMotionProfile = subjectMotionProfile,
@@ -1085,13 +980,13 @@ private fun ShootingAidCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = assessment,
+                text = assessment.message,
                 style = MaterialTheme.typography.bodySmall,
-                color = when {
-                    measuredShutterSeconds == null -> MaterialTheme.colorScheme.onSurfaceVariant
-                    measuredShutterSeconds <= recommendedMinimumShutterSeconds -> MaterialTheme.colorScheme.primary
-                    measuredShutterSeconds <= recommendedMinimumShutterSeconds * 2.0 -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.error
+                color = when (assessment.level) {
+                    ShootingAidAssessmentLevel.AWAITING_READING -> MaterialTheme.colorScheme.onSurfaceVariant
+                    ShootingAidAssessmentLevel.SUPPORTED -> MaterialTheme.colorScheme.primary
+                    ShootingAidAssessmentLevel.BORDERLINE -> MaterialTheme.colorScheme.tertiary
+                    ShootingAidAssessmentLevel.TOO_SLOW -> MaterialTheme.colorScheme.error
                 },
             )
         }
@@ -1547,36 +1442,6 @@ private fun formatCameraExposureSummary(reading: ReflectiveMeterReading): String
     return "f/${formatDecimal(reading.aperture.toDouble())}  ${formatExposureTime(reading.shutterSeconds)}  ISO ${reading.iso}"
 }
 
-private fun availableStabilizationModes(
-    body: CameraBodyProfile,
-    lens: LensProfile,
-): List<StabilizationMode> {
-    return buildList {
-        add(StabilizationMode.OFF)
-        if (lens.hasOpticalStabilization) {
-            add(StabilizationMode.LENS_ONLY)
-        }
-        if (body.hasInBodyStabilization) {
-            add(StabilizationMode.BODY_ONLY)
-        }
-        if (lens.hasOpticalStabilization && body.hasInBodyStabilization) {
-            add(StabilizationMode.HYBRID)
-        }
-    }
-}
-
-private fun matchingScenePreset(
-    subjectMotionProfile: SubjectMotionProfile,
-    stabilizationMode: StabilizationMode,
-    availableModes: List<StabilizationMode>,
-): ScenePreset {
-    return ScenePreset.entries.firstOrNull { preset ->
-        preset != ScenePreset.CUSTOM &&
-            preset.subjectMotionProfile == subjectMotionProfile &&
-            preset.resolveStabilizationMode(availableModes) == stabilizationMode
-    } ?: ScenePreset.CUSTOM
-}
-
 private fun buildExposureWorkflowSuggestion(
     workflowPriority: WorkflowPriority,
     measuredShutterSeconds: Double?,
@@ -1724,30 +1589,6 @@ private fun pickApertureOptionForGain(
         .filter { option -> apertureGainStops(currentAperture, option.value) + 0.05 >= requiredGainStops }
         .maxByOrNull { option -> option.value }
         ?: candidates.first()
-}
-
-private fun buildShootingAidAssessment(
-    measuredShutterSeconds: Double?,
-    recommendedMinimumShutterSeconds: Double,
-    subjectMotionProfile: SubjectMotionProfile,
-    stabilizationMode: StabilizationMode,
-): String {
-    val measuredSeconds = measuredShutterSeconds ?: return "Awaiting a metered shutter so the shooting aid can compare it to your handheld and subject-motion limits."
-    val deltaStops = log2(measuredSeconds / recommendedMinimumShutterSeconds)
-
-    return when {
-        deltaStops <= 0.0 -> {
-            "The metered shutter is fast enough for ${subjectMotionProfile.label.lowercase(Locale.getDefault())} shooting with ${stabilizationMode.label.lowercase(Locale.getDefault())}."
-        }
-
-        deltaStops <= 1.0 -> {
-            "The metered shutter is borderline. About one stop faster would give more margin for ${subjectMotionProfile.label.lowercase(Locale.getDefault())} subjects."
-        }
-
-        else -> {
-            "The metered shutter is too slow for this setup. Raise ISO, open the aperture, add support, or reduce subject motion."
-        }
-    }
 }
 
 private fun isCameraPermissionGranted(context: Context): Boolean {

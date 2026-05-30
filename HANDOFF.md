@@ -61,6 +61,14 @@ compensation stops, surface stock notes when available, and generate a clipboard
 Because rolls snapshot reciprocity exponent/onset values, the reciprocity helper still works from a
 roll even if the linked stock is later removed from the library.
 
+**Phase 1 meter polish** has resumed as the next roadmap slice. `metering/domain/ShootingAid.kt`
+now owns the pure shooting-aid models and helpers that used to live inside
+`LightMeterScreen.kt`: subject-motion profiles, stabilization modes, built-in scene presets,
+available stabilization-mode resolution, scene-preset matching, and the structured qualitative
+assessment shown in the shooting-aid card. `LightMeterScreen.kt` now consumes those domain helpers;
+the remaining workflow-coaching / nearest-option logic is still in presentation and is the next
+meter extraction target.
+
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
@@ -121,6 +129,9 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   (roll statuses, default timestamps), `FilmDevelopment` (dilution math, temperature compensation,
   agitation cues, fixed recipe-step builder), `FilmPushPull` (EI delta + latitude guidance + note
   builder), `FilmReciprocity` (stock-aware reciprocity correction + note builder).
+- `metering/domain/` — exposure math/formatting helpers plus `ShootingAid` (subject-motion +
+  stabilization models, scene presets, available-mode resolution, preset matching, qualitative
+  shooting-aid assessment).
 - `film/presentation/` — `FilmScreen` (hub), `FilmStocksScreen`, `FilmStocksViewModel`,
   `FilmRollsScreen`, `FilmRollsViewModel`, `FilmRollDetailScreen`, `FilmRollDetailViewModel`,
   `FilmDevelopmentScreen`, `FilmDevelopmentViewModel`, `FilmReferenceViewModel`,
@@ -181,7 +192,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 113 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 120 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -244,8 +255,9 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain helpers
-   and tests now that the Phase 5 film suite is complete.
+1. **Phase 1 meter polish** — continue from the finished shooting-aid extraction by moving the
+   remaining workflow-coaching / nearest-option logic out of `LightMeterScreen.kt` into pure
+   domain helpers and tests.
 2. **Polish P3/P4** — link a shoot to a saved location; per-shot gear/notes; map view for
    locations; reference-photo attachments.
 3. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
@@ -291,8 +303,9 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 - Gear reference photos are stored as persisted document URI strings; the screen currently shows
   attachment labels only, not thumbnails, and `GearInventoryViewModel` now owns URI-permission
   acquisition/release so replace, clear, and delete do not leak grants.
-- Light meter logic still partly lives in `metering/presentation/LightMeterScreen.kt`
-  (large file) rather than fully in `domain`; refactor opportunistically.
+- Light meter shooting-aid logic is now in `metering/domain/ShootingAid.kt`, but the
+  workflow-coaching / nearest-option helper block still lives in
+  `metering/presentation/LightMeterScreen.kt` (large file) rather than fully in `domain`.
 - KMP `shared` module not yet extracted (Phase 8). Keep domain Android-free to make it cheap.
 - No instrumented/Robolectric tests for DAOs (project is JVM-unit-test only) — DAO logic is
   thin and matches the untested `ScenePresetDao` precedent.

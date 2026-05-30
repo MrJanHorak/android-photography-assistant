@@ -20,23 +20,26 @@ later phases depend on the Phase 0 foundation.
 
 **Status:** Phase 0 (foundation) ✅, Phase 2 (all 11 calculators C1–C11) ✅,
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅,
-Phase 4 Gear G1–G7 ✅, and Phase 5 **FL1 film stock database** ✅.
+Phase 4 Gear G1–G7 ✅, and Phase 5 **FL1–FL5 film suite** ✅.
 The **Tools** grid is now sectioned for scanability, the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
 battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export,
-and the new **Film** tab now provides a Room-backed stock library seeded from bundled JSON plus
-editable custom stocks.
+and the new **Film** tab now provides a Room-backed stock library, roll logger, development timer,
+push/pull helper, and reciprocity assistant. The first resumed **Phase 1 meter polish** slice is
+also complete: shooting-aid presets, stabilization resolution, and qualitative handheld assessment
+now live in pure `metering/domain/ShootingAid.kt` with JVM tests.
 
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v12) + DataStore,
   core-library desugaring for `java.time`, CameraX, KSP. AGP 9.2.1, Kotlin 2.2.10,
   Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **113 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **120 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Phase 1 meter polish continues** — `LightMeterScreen.kt` still holds business logic that
-   belongs in pure `metering/domain/` helpers now that the Film suite is complete.
+1. **Phase 1 meter polish continues** — the shooting-aid/preset slice is extracted, but
+   `LightMeterScreen.kt` still holds the workflow-coaching / nearest-option business logic that
+   should move into pure `metering/domain/` helpers next.
 2. **Planner polish (P3/P4)** still has useful follow-through work: linking shoots to locations,
    richer per-shot notes/gear, map view, and reference-photo attachments.
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
@@ -116,6 +119,13 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
 - **[BUG2] Stabilization direction in `calculateHandheldMinimumShutterSeconds` —
   ✅ FIXED (Phase 2).** Now *multiplies* by `2^stabilizationStops` so IS/IBIS relaxes
   the handheld limit. Regression test added (`handheldMinimum_stabilizationAllowsLongerShutter`).
+
+- **Meter-polish progress (2026-05-30).** The first resumed refactor slice is done:
+  `metering/domain/ShootingAid.kt` now owns `SubjectMotionProfile`, `StabilizationMode`,
+  built-in `ScenePreset`s, available-mode resolution, scene-preset matching, and the structured
+  shooting-aid assessment used by `LightMeterScreen.kt`. The next extraction target is the
+  workflow-coaching / nearest-exposure-option helper block that still depends on
+  `ExposureCatalog.kt` presentation models.
 
 - **[M1] Exposure recipe summary card.** Compact card combining shutter target,
   aperture, ISO, and the priority-based adjustment path. *Acceptance:* card shows a
@@ -318,9 +328,10 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 1 meter polish**: move the remaining `LightMeterScreen.kt` business logic into
-   pure domain helpers and tests.
-6. **Phase 1 meter polish** (move remaining `LightMeterScreen.kt` logic into `domain`).
+5. **NEXT → Phase 1 meter polish**: extract the remaining workflow-coaching and nearest-option
+   helper block from `LightMeterScreen.kt` into pure domain helpers and tests.
+6. **Phase 1 meter polish** (finish moving the remaining `LightMeterScreen.kt` logic into
+   `domain`).
 7. **Phase 6/7** — business + on-shoot utilities as the app matures.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.
 
