@@ -38,6 +38,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
+import com.janhorak.shutterdeck.gear.domain.defaultGearInsuranceCsvFileName
+import com.janhorak.shutterdeck.gear.domain.defaultGearInsurancePdfFileName
 import com.janhorak.shutterdeck.gear.domain.GearLoanReminderLevel
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.ResultRow
@@ -57,10 +59,12 @@ fun GearInventoryScreen(
     val batteries by viewModel.batteries.collectAsStateWithLifecycle()
     val memoryCards by viewModel.memoryCards.collectAsStateWithLifecycle()
     val loans by viewModel.loans.collectAsStateWithLifecycle()
+    val insuranceSummary by viewModel.insuranceSummary.collectAsStateWithLifecycle()
     val kits by viewModel.kits.collectAsStateWithLifecycle()
     val maintenanceEntries by viewModel.maintenanceEntries.collectAsStateWithLifecycle()
     val seedStatus by viewModel.seedStatus.collectAsStateWithLifecycle()
     val inventoryStatus by viewModel.inventoryStatus.collectAsStateWithLifecycle()
+    val exportStatus by viewModel.exportStatus.collectAsStateWithLifecycle()
     var editingGearId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showEditor by rememberSaveable { mutableStateOf(false) }
     var editingReferencePhotoUri by rememberSaveable { mutableStateOf("") }
@@ -82,6 +86,20 @@ fun GearInventoryScreen(
     ) { uri ->
         if (uri != null) {
             editingReferencePhotoUri = uri.toString()
+        }
+    }
+    val insuranceCsvExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportInsuranceCsv(uri)
+        }
+    }
+    val insurancePdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf"),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportInsurancePdf(uri)
         }
     }
 
@@ -469,6 +487,27 @@ fun GearInventoryScreen(
                     }
                 }
             }
+        }
+        item {
+            SectionHeader(
+                title = "Insurance & export",
+                subtitle = "Save a CSV or PDF inventory report for insurance records or value reviews.",
+            )
+        }
+        item {
+            GearInsuranceExportCard(
+                summary = insuranceSummary,
+                exportStatus = exportStatus,
+                hasInventoryItems = items.isNotEmpty(),
+                onExportCsv = {
+                    viewModel.clearExportStatus()
+                    insuranceCsvExportLauncher.launch(defaultGearInsuranceCsvFileName())
+                },
+                onExportPdf = {
+                    viewModel.clearExportStatus()
+                    insurancePdfExportLauncher.launch(defaultGearInsurancePdfFileName())
+                },
+            )
         }
         item {
             SectionHeader(

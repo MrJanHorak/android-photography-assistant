@@ -1,7 +1,10 @@
 package com.janhorak.shutterdeck.gear.presentation
 
-import android.content.Intent
 import android.content.Context
+import android.content.Intent
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,8 +23,13 @@ import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardDao
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardEntity
+import com.janhorak.shutterdeck.gear.domain.GearInsuranceExportItem
+import com.janhorak.shutterdeck.gear.domain.GearInsuranceSummary
 import com.janhorak.shutterdeck.gear.domain.GearLoanReminder
 import com.janhorak.shutterdeck.gear.domain.GearLoanReminderLevel
+import com.janhorak.shutterdeck.gear.domain.buildGearInsuranceCsv
+import com.janhorak.shutterdeck.gear.domain.buildGearInsuranceExportReport
+import com.janhorak.shutterdeck.gear.domain.buildGearInsurancePdfLines
 import com.janhorak.shutterdeck.gear.domain.calculateGearLoanReminder
 import com.janhorak.shutterdeck.gear.domain.parseGearLoanDate
 import com.janhorak.shutterdeck.metering.presentation.CameraBodyProfile
@@ -35,9 +43,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.io.OutputStream
 import javax.inject.Inject
 
 data class GearKitItemSummary(
@@ -105,9 +116,23 @@ class GearInventoryViewModel @Inject constructor(
     val seedStatus: StateFlow<String?> = _seedStatus.asStateFlow()
     private val _inventoryStatus = MutableStateFlow<String?>(null)
     val inventoryStatus: StateFlow<String?> = _inventoryStatus.asStateFlow()
+    private val _exportStatus = MutableStateFlow<String?>(null)
+    val exportStatus: StateFlow<String?> = _exportStatus.asStateFlow()
 
     val items: StateFlow<List<GearItemEntity>> = gearItemDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val insuranceSummary: StateFlow<GearInsuranceSummary> = items
+        .map { inventoryItems ->
+            buildGearInsuranceExportReport(
+                inventoryItems.map(::gearInsuranceExportItem)
+            ).summary
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            buildGearInsuranceExportReport(emptyList()).summary,
+        )
 
     val filters: StateFlow<List<GearFilterSummary>> = combine(
         items,
@@ -344,6 +369,10 @@ class GearInventoryViewModel @Inject constructor(
         _inventoryStatus.value = null
     }
 
+    fun clearExportStatus() {
+        _exportStatus.value = null
+    }
+
     fun saveFilter(
         id: Long,
         label: String,
@@ -486,6 +515,42 @@ class GearInventoryViewModel @Inject constructor(
         viewModelScope.launch { gearLoanDao.delete(item) }
     }
 
+    fun exportInsuranceCsv(destination: Uri) {
+        val exportItems = items.value.map(::gearInsuranceExportItem)
+        if (exportItems.isEmpty()) {
+            _exportStatus.value = "Add at least one saved gear item before exporting."
+            return
+        }
+        viewModelScope.launch {
+            try {
+                writeInsuranceCsv(destination, exportItems)
+                _exportStatus.value = "Saved the CSV insurance export."
+            } catch (_: SecurityException) {
+                _exportStatus.value = "Couldn't access the selected document."
+            } catch (error: IOException) {
+                _exportStatus.value = error.message ?: "Couldn't write the CSV insurance export."
+            }
+        }
+    }
+
+    fun exportInsurancePdf(destination: Uri) {
+        val exportItems = items.value.map(::gearInsuranceExportItem)
+        if (exportItems.isEmpty()) {
+            _exportStatus.value = "Add at least one saved gear item before exporting."
+            return
+        }
+        viewModelScope.launch {
+            try {
+                writeInsurancePdf(destination, exportItems)
+                _exportStatus.value = "Saved the PDF insurance export."
+            } catch (_: SecurityException) {
+                _exportStatus.value = "Couldn't access the selected document."
+            } catch (error: IOException) {
+                _exportStatus.value = error.message ?: "Couldn't write the PDF insurance export."
+            }
+        }
+    }
+
     fun saveKit(
         id: Long,
         name: String,
@@ -561,6 +626,37 @@ class GearInventoryViewModel @Inject constructor(
                 "No new items to seed from the ${catalog.source.label.lowercase()}."
             } else {
                 "Added ${missingSeeds.size} item(s) from the ${catalog.source.label.lowercase()}."
+            }
+        }
+    }
+
+    private suspend fun writeInsuranceCsv(
+        destination: Uri,
+        exportItems: List<GearInsuranceExportItem>,
+    ) {
+        withContext(Dispatchers.IO) {
+            val report = buildGearInsuranceExportReport(exportItems)
+            val outputStream = appContext.contentResolver.openOutputStream(destination, "w")
+                ?: throw IOException("Couldn't open the selected document for writing.")
+            outputStream.bufferedWriter().use { writer ->
+                writer.write(buildGearInsuranceCsv(report))
+            }
+        }
+    }
+
+    private suspend fun writeInsurancePdf(
+        destination: Uri,
+        exportItems: List<GearInsuranceExportItem>,
+    ) {
+        withContext(Dispatchers.IO) {
+            val report = buildGearInsuranceExportReport(exportItems)
+            val outputStream = appContext.contentResolver.openOutputStream(destination, "w")
+                ?: throw IOException("Couldn't open the selected document for writing.")
+            outputStream.use { stream ->
+                writePdfDocument(
+                    outputStream = stream,
+                    lines = buildGearInsurancePdfLines(report),
+                )
             }
         }
     }
@@ -702,6 +798,127 @@ private fun filterLabel(filter: GearFilterEntity): String =
         .filter { it.isNotBlank() }
         .joinToString(" · ")
         .ifBlank { filter.label }
+
+private fun gearInsuranceExportItem(item: GearItemEntity): GearInsuranceExportItem =
+    GearInsuranceExportItem(
+        category = item.category.trim().ifBlank { "Accessory" },
+        itemName = gearDisplayName(item),
+        serialNumber = item.serialNumber.trim(),
+        purchaseDateText = item.purchaseDateText.trim(),
+        purchaseSource = item.purchaseSource.trim(),
+        storageLocation = item.storageLocation.trim(),
+        conditionLabel = item.conditionLabel.trim(),
+        purchasePrice = item.purchasePrice,
+        currentValue = item.currentValue,
+        weightGrams = item.weightGrams,
+        hasReferencePhoto = item.referencePhotoUri.trim().isNotBlank(),
+        notes = item.notes.trim(),
+    )
+
+private fun writePdfDocument(
+    outputStream: OutputStream,
+    lines: List<String>,
+) {
+    val document = PdfDocument()
+    val pageWidth = 595
+    val pageHeight = 842
+    val horizontalMargin = 40f
+    val topMargin = 48f
+    val bottomMargin = 48f
+    val contentWidth = pageWidth - (horizontalMargin * 2)
+    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = 16f
+        typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+    }
+    val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = 11f
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
+    }
+
+    var pageNumber = 1
+    var page = document.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create())
+    var canvas = page.canvas
+    var y = topMargin
+
+    lines.forEachIndexed { index, line ->
+        val paint = if (index == 0) titlePaint else bodyPaint
+        val lineHeight = if (paint === titlePaint) 24f else 16f
+        val wrappedLines = wrapPdfLine(
+            text = line,
+            paint = paint,
+            maxWidth = contentWidth,
+        )
+        wrappedLines.forEach { wrappedLine ->
+            if (y > pageHeight - bottomMargin) {
+                document.finishPage(page)
+                pageNumber += 1
+                page = document.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create())
+                canvas = page.canvas
+                y = topMargin
+            }
+            if (wrappedLine.isNotEmpty()) {
+                canvas.drawText(wrappedLine, horizontalMargin, y, paint)
+            }
+            y += lineHeight
+        }
+    }
+
+    try {
+        document.finishPage(page)
+        document.writeTo(outputStream)
+    } finally {
+        document.close()
+    }
+}
+
+private fun wrapPdfLine(
+    text: String,
+    paint: Paint,
+    maxWidth: Float,
+): List<String> {
+    if (text.isBlank()) return listOf("")
+
+    val segments = mutableListOf<String>()
+    var remaining = text.trimEnd()
+    while (remaining.isNotEmpty()) {
+        if (paint.measureText(remaining) <= maxWidth) {
+            segments += remaining
+            break
+        }
+
+        val candidate = remaining
+            .takeWhileMaxWidth(paint, maxWidth)
+            .trimEnd()
+        val breakIndex = candidate.lastIndexOf(' ')
+        val line = when {
+            breakIndex > 0 -> candidate.substring(0, breakIndex).trimEnd()
+            candidate.isNotEmpty() -> candidate
+            else -> remaining.take(1)
+        }
+        segments += line
+        remaining = remaining.removePrefix(line).trimStart()
+    }
+    return segments
+}
+
+private fun String.takeWhileMaxWidth(
+    paint: Paint,
+    maxWidth: Float,
+): String {
+    if (isEmpty()) return ""
+    var bestIndex = 0
+    for (index in indices) {
+        val candidate = substring(0, index + 1)
+        if (paint.measureText(candidate) <= maxWidth) {
+            bestIndex = index + 1
+        } else {
+            break
+        }
+    }
+    return substring(0, bestIndex)
+}
 
 private val filterTypeOrder = filterTypeOptions.withIndex().associate { it.value to it.index }
 private val batteryStatusOrder = batteryStatusOptions.withIndex().associate { it.value to it.index }

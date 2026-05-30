@@ -14,7 +14,7 @@ Package root: `com.janhorak.shutterdeck`
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
-**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + kits + maintenance), **More** (settings/theme).
+**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **More** (settings/theme).
 
 **14 working tools** (all reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**):
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
@@ -26,7 +26,7 @@ ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation has 4 tabs:
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
 
-**Gear tab** now has eight useful capabilities:
+**Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
    lens thread size, condition, storage location, purchase source, and a lightweight reference-photo
@@ -44,9 +44,14 @@ and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
    items (or a manual external-gear label), direction/status fields, counterpart/date/notes,
    Gear-tab CRUD, summary counts, and in-app due-soon / overdue reminders when the due date is
    saved as ISO `YYYY-MM-DD`.
-7. **Packing kits** — build named kits from saved gear, see total weight, and tick items off
+7. **Insurance & export** — an **Insurance & export** section summarizes owned inventory
+   coverage (item count, serial coverage, saved current values, saved reference photos, total
+   purchase/current value) and can save **CSV** or **PDF** reports via Android's document picker.
+   The export currently covers owned inventory items (`GearItemEntity`), which are the records
+   that store insurer-relevant serial/value metadata.
+8. **Packing kits** — build named kits from saved gear, see total weight, and tick items off
    as packed before leaving.
-8. **Maintenance log** — record cleanings, firmware updates, repairs and shutter-count checkpoints
+9. **Maintenance log** — record cleanings, firmware updates, repairs and shutter-count checkpoints
    against saved gear items.
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
@@ -77,8 +82,9 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 - `gear/presentation/` — `GearInventoryScreen`, `GearInventoryViewModel`, `GearItemEditState`
   (inventory + filter + battery/card + loans + kits + maintenance summaries),
   `GearFilterTrackerSection.kt`, `GearSupportTrackerSection.kt`, `GearLoanTrackerSection.kt`,
-  `GearPresentationFormatting.kt`.
-- `gear/domain/` — `GearLoanReminders.kt` (pure reminder helper for due-soon/overdue status).
+  `GearInsuranceExportSection.kt`, `GearPresentationFormatting.kt`.
+- `gear/domain/` — `GearLoanReminders.kt` (pure reminder helper for due-soon/overdue status),
+  `GearInsuranceExport.kt` (owned-inventory insurance summary + CSV/PDF export content).
 - `calculators/domain/` — 13 pure calculators incl. `SolarTimes.kt`, `CelestialPosition.kt`.
 - `calculators/presentation/` — one screen per calculator + shared infra:
   `CalculatorScaffold.kt` (CalculatorScaffold/ResultCard/CalculatorHint),
@@ -127,7 +133,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 87 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 91 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -190,15 +196,12 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Finish Phase 4 Gear** — inventory, catalog seeding, richer metadata/reference-photo support,
-   filter/thread tracking, battery/card tracking, loan/rental tracking, packing kits and
-   maintenance logs are working, so the next highest-value step is the insurance/export workflow.
-2. **Phase 5 Film suite (FL1/FL2)** — film stock DB + roll/frame logger (Room). Strong
-   differentiator; reuses reciprocity from Sunny 16 (C6).
-3. **Polish P3/P4:** link a shoot to a saved location; per-shot gear/notes; map view for
+1. **Phase 5 Film suite (FL1/FL2)** — film stock DB + roll/frame logger (Room). Phase 4 Gear is
+   complete through G7, so this is now the highest-value next block.
+2. **Polish P3/P4** — link a shoot to a saved location; per-shot gear/notes; map view for
    locations; reference-photo attachments.
-4. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain.
-5. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
+3. **Phase 1 meter polish** — continue moving `LightMeterScreen.kt` logic into pure domain.
+4. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
    composition overlays on the CameraX preview.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
@@ -217,6 +220,10 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
   more neutral shared package is still a worthwhile cleanup, not a blocker.
 - Loan/rental reminders are currently **in-app status cues**, not scheduled Android notifications,
   and they only light up when `GearLoanEntity.dueDateText` is saved as ISO `YYYY-MM-DD`.
+- Insurance export currently covers the owned inventory list (`GearItemEntity`) only, because
+  that is where serial numbers, purchase/current values, purchase source, storage, and reference
+  photo attachments are stored today. CSV/PDF files are saved through SAF `CreateDocument`,
+  and the app still does **not** store a currency code alongside entered values.
 - Filter compatibility is **derived**, not hard-linked: `GearItemEntity.filterThreadSizeText`
   and `GearFilterEntity.threadSizeText` are normalized via a blank-safe helper so unfilled
   values never match each other by accident.
