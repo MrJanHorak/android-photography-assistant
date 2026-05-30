@@ -87,6 +87,20 @@ and `sortOrder` data when editing a shot, and `ShootDetailScreen.kt` uses a shar
 instead of the old one-line shot adder so each shot can carry optional gear and planning notes
 without losing the checklist workflow.
 
+Saved scouting locations now also support one lightweight **reference photo** attachment.
+`LocationEntity` gained `referencePhotoUri`, `LocationsScreen.kt` now supports choose/replace/clear
+photo actions inside the location editor, and `LocationsViewModel.kt` preserves `createdAt` on edit
+while only closing the editor after a successful save. Shared URI-grant handling now lives in
+`core/storage/ReferencePhotoGrantManager.kt` so Gear and Planner can safely reuse the same SAF
+document without accidentally releasing each other's persisted read access.
+
+That planner follow-through is now rounded out with an in-app **map preview** and lightweight
+**shot reordering**. Saved locations with coordinates can open a full-width OpenStreetMap preview
+dialog plus an external map-app fallback, with osmdroid initialized from `ShutterDeckApp.kt`
+without requiring an API key. `ShootDetailScreen.kt` also now supports move-up / move-down shot
+reordering within the open and completed groups, with pure reorder logic in
+`planner/domain/ShotOrdering.kt`.
+
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
@@ -117,10 +131,10 @@ without losing the checklist workflow.
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v14) + DataStore (Preferences) for theme/settings.
-This build still uses `fallbackToDestructiveMigration(dropAllTables = true)`, so upgrading from
-v13 to v14 wipes local Room data; reseed the gear catalog / film catalog and recreate local planner,
-gear and film records after install.
+**Persistence:** Room DB `shutterdeck.db` (v15) + DataStore (Preferences) for theme/settings.
+`AppDatabase.MIGRATION_14_15` now preserves the new location `referencePhotoUri` column on upgrade,
+but this build still keeps `fallbackToDestructiveMigration(dropAllTables = true)` for older schema
+jumps, so much older local installs can still lose Room data on upgrade.
 
 ---
 
@@ -168,10 +182,13 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `CalculatorScaffold.kt` (CalculatorScaffold/ResultCard/CalculatorHint),
   `CalculatorFormatting.kt` (formatMeters/Degrees/OneDecimal/Clock/…),
   `CalculatorInputState.kt` (`rememberInput`).
+- `planner/domain/` — `ShotOrdering.kt` (pure shot-reordering helper for the planner checklist).
 - `planner/presentation/` — `PlannerScreen` (hub), `Locations*`, `Shoots*`,
   `ShootDetail*` (screens + `@HiltViewModel`s).
 - `core/location/` — `DeviceLocationProvider` (one-shot fused current-location lookup for
   planner/calculator autofill).
+- `core/storage/` — `PersistedDocumentAccess` + `ReferencePhotoGrantManager` (shared persisted
+  document labels + URI-permission handling for Gear and Planner reference photos).
 - `metering/` — the original light meter feature (data/domain/di/presentation).
 - `core/data/` — `SettingsRepository`, `CoreDataModule` (Hilt: DataStore + Room + DAOs),
   `db/` (`AppDatabase`, entities, DAOs incl. `GearItemEntity` / `GearItemDao`,
@@ -198,7 +215,6 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 - `app/build.gradle.kts` now enables **core library desugaring** so existing `java.time`
   usage works correctly on minSdk 24–25 devices.
 - `android.disallowKotlinSourceSets=false` is required (Gradle warns it's experimental — expected).
-- Harmless warnings: Hilt annotation target (KT-73255). Ignore.
 
 ---
 
@@ -217,7 +233,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 132 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 136 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -280,13 +296,12 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Continue planner polish (P3/P4)** — build on shoot linking + current-location autofill +
-   per-shot notes/gear with map view/reference-photo follow-through for saved locations, and
-   optionally shot reordering afterward.
-2. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
+1. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
    composition overlays on the CameraX preview.
-3. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
+2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
+3. **Phase 6/7 backlog** — business and on-shoot utilities remain the next broad feature area
+   now that planner polish is complete.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
 EV↔lux↔foot-candle converter; Kelvin/mired WB converter; ft/m & °C/°F unit converter;

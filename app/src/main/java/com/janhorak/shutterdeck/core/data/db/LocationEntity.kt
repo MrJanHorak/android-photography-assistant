@@ -10,6 +10,7 @@ data class LocationEntity(
     val name: String,
     val latitude: Double?,
     val longitude: Double?,
+    val referencePhotoUri: String = "",
     val notes: String,
     val bestTime: String,
     val createdAt: Long = System.currentTimeMillis(),

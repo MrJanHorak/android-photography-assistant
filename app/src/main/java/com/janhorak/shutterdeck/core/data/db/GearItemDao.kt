@@ -12,6 +12,9 @@ interface GearItemDao {
     @Query("SELECT * FROM gear_items ORDER BY category ASC, brand ASC, model ASC, createdAt DESC")
     fun observeAll(): Flow<List<GearItemEntity>>
 
+    @Query("SELECT COUNT(*) FROM gear_items WHERE TRIM(referencePhotoUri) = :uriString AND id != :excludingId")
+    suspend fun countByReferencePhotoUriExcludingId(uriString: String, excludingId: Long): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(item: GearItemEntity): Long
 

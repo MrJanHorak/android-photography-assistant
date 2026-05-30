@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     coreLibraryDesugaring(libs.android.tools.desugar.jdk.libs)
     implementation(libs.play.services.location)
+    implementation(libs.osmdroid.android)
     
     // Hilt For DI
     implementation(libs.hilt.android)

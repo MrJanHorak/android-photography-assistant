@@ -1,8 +1,7 @@
 package com.janhorak.shutterdeck.gear.presentation
 
 import com.janhorak.shutterdeck.core.data.db.GearItemEntity
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
+import com.janhorak.shutterdeck.core.storage.documentAttachmentLabel
 import java.util.Locale
 
 internal const val UNASSIGNED_GEAR_LABEL = "Unassigned"
@@ -74,17 +73,7 @@ internal fun formatThreadSizeText(text: String): String {
     }
 }
 
-internal fun referencePhotoLabel(uriString: String): String {
-    val trimmed = uriString.trim()
-    if (trimmed.isBlank()) return ""
-
-    val encodedLabel = trimmed
-        .substringBefore('?')
-        .substringAfterLast('/')
-        .ifBlank { trimmed }
-
-    return URLDecoder.decode(encodedLabel, StandardCharsets.UTF_8)
-}
+internal fun referencePhotoLabel(uriString: String): String = documentAttachmentLabel(uriString)
 
 internal fun loanCounterpartFieldLabel(direction: String): String = when (direction) {
     "Loaned out" -> "Loaned to"

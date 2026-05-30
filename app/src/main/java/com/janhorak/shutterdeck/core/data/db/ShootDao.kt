@@ -27,6 +27,9 @@ interface ShootDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertShot(shot: ShotItemEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertShots(shots: List<ShotItemEntity>)
+
     @Delete
     suspend fun deleteShot(shot: ShotItemEntity)
 }

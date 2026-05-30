@@ -2,6 +2,8 @@ package com.janhorak.shutterdeck.core.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /** Root Room database for ShutterDeck. Add new entities and DAOs here as features land. */
 @Database(
@@ -22,7 +24,7 @@ import androidx.room.RoomDatabase
         FilmRollEntity::class,
         FilmFrameEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,4 +40,14 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gearMaintenanceDao(): GearMaintenanceDao
     abstract fun filmStockDao(): FilmStockDao
     abstract fun filmRollDao(): FilmRollDao
+
+    companion object {
+        val MIGRATION_14_15: Migration = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE scout_locations ADD COLUMN referencePhotoUri TEXT NOT NULL DEFAULT ''",
+                )
+            }
+        }
+    }
 }

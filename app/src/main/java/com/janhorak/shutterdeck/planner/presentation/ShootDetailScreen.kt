@@ -16,6 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
@@ -59,6 +61,19 @@ fun ShootDetailScreen(
     val shoot = headerState.shoot
     val editingShot = remember(editingShotId, shots) {
         shots.firstOrNull { it.id == editingShotId }
+    }
+    val moveStateByShotId = remember(shots) {
+        shots.groupBy { it.done }
+            .values
+            .flatMap { group ->
+                group.mapIndexed { index, shot ->
+                    shot.id to ShotMoveState(
+                        canMoveUp = index > 0,
+                        canMoveDown = index < group.lastIndex,
+                    )
+                }
+            }
+            .toMap()
     }
 
     val doneCount = shots.count { it.done }
@@ -152,9 +167,14 @@ fun ShootDetailScreen(
             }
         }
         items(shots, key = { it.id }) { shot ->
+            val moveState = moveStateByShotId[shot.id] ?: ShotMoveState()
             ShotRow(
                 shot = shot,
                 onToggle = { viewModel.toggleDone(shot) },
+                canMoveUp = moveState.canMoveUp,
+                canMoveDown = moveState.canMoveDown,
+                onMoveUp = { viewModel.moveShotUp(shot) },
+                onMoveDown = { viewModel.moveShotDown(shot) },
                 onEdit = { editShot(shot) },
                 onDelete = { viewModel.delete(shot) },
             )
@@ -225,6 +245,10 @@ private fun LinkedLocationCard(
 private fun ShotRow(
     shot: ShotItemEntity,
     onToggle: () -> Unit,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -268,10 +292,21 @@ private fun ShotRow(
                 )
             }
         }
+        IconButton(onClick = onMoveUp, enabled = canMoveUp) {
+            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Move up")
+        }
+        IconButton(onClick = onMoveDown, enabled = canMoveDown) {
+            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Move down")
+        }
         IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit") }
         IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
     }
 }
+
+private data class ShotMoveState(
+    val canMoveUp: Boolean = false,
+    val canMoveDown: Boolean = false,
+)
 
 @Composable
 private fun ShotDialog(

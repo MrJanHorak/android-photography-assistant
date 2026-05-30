@@ -16,6 +16,7 @@ datastorePreferences = "1.1.1"
 desugarJdkLibs = "2.1.5"
 json = "20240303"
 playServicesLocation = "21.3.0"
+osmdroid = "6.1.20"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,6 +47,7 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 android-tools-desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 json = { group = "org.json", name = "json", version.ref = "json" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 
 camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
 camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }

@@ -41,6 +41,7 @@ object CoreDataModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "shutterdeck.db")
+            .addMigrations(AppDatabase.MIGRATION_14_15)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 

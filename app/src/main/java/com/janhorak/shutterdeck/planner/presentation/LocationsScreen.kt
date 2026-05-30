@@ -1,5 +1,7 @@
 package com.janhorak.shutterdeck.planner.presentation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -26,8 +28,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.janhorak.shutterdeck.core.data.db.LocationEntity
+import com.janhorak.shutterdeck.core.storage.documentAttachmentLabel
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.location.CurrentLocationAction
 import com.janhorak.shutterdeck.ui.location.CurrentLocationRequestState
@@ -48,6 +51,7 @@ private data class LocationEditorState(
     val longitude: String = "",
     val bestTime: String = "",
     val notes: String = "",
+    val referencePhotoUri: String = "",
 )
 
 @Composable
@@ -56,36 +60,96 @@ fun LocationsScreen(
     viewModel: LocationsViewModel = hiltViewModel(),
 ) {
     val locations by viewModel.locations.collectAsStateWithLifecycle()
-    var editing by remember { mutableStateOf<LocationEditorState?>(null) }
+    val status by viewModel.status.collectAsStateWithLifecycle()
+    var showEditor by rememberSaveable { mutableStateOf(false) }
+    var editingLocationId by rememberSaveable { mutableStateOf(0L) }
+    var nameDraft by rememberSaveable { mutableStateOf("") }
+    var latitudeDraft by rememberSaveable { mutableStateOf("") }
+    var longitudeDraft by rememberSaveable { mutableStateOf("") }
+    var bestTimeDraft by rememberSaveable { mutableStateOf("") }
+    var notesDraft by rememberSaveable { mutableStateOf("") }
+    var referencePhotoUriDraft by rememberSaveable { mutableStateOf("") }
+    var previewLocationId by rememberSaveable { mutableStateOf(0L) }
+    val editing = locations.firstOrNull { it.id == editingLocationId }
+    val previewLocation = locations.firstOrNull { it.id == previewLocationId }
+    val referencePhotoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            referencePhotoUriDraft = uri.toString()
+        }
+    }
     val currentLocationState = rememberCurrentLocationRequestState { coordinates ->
-        editing = editing?.copy(
-            latitude = formatCoordinateInput(coordinates.latitude),
-            longitude = formatCoordinateInput(coordinates.longitude),
+        latitudeDraft = formatCoordinateInput(coordinates.latitude)
+        longitudeDraft = formatCoordinateInput(coordinates.longitude)
+    }
+
+    fun clearEditor() {
+        showEditor = false
+        editingLocationId = 0L
+        nameDraft = ""
+        latitudeDraft = ""
+        longitudeDraft = ""
+        bestTimeDraft = ""
+        notesDraft = ""
+        referencePhotoUriDraft = ""
+        viewModel.clearStatus()
+    }
+
+    fun openEditor(location: LocationEntity?) {
+        editingLocationId = location?.id ?: 0L
+        nameDraft = location?.name.orEmpty()
+        latitudeDraft = location?.latitude?.let(::formatCoordinateInput) ?: ""
+        longitudeDraft = location?.longitude?.let(::formatCoordinateInput) ?: ""
+        bestTimeDraft = location?.bestTime.orEmpty()
+        notesDraft = location?.notes.orEmpty()
+        referencePhotoUriDraft = location?.referencePhotoUri.orEmpty()
+        showEditor = true
+        viewModel.clearStatus()
+    }
+
+    if (showEditor && (editingLocationId == 0L || editing != null)) {
+        LocationDialog(
+            state = LocationEditorState(
+                id = editingLocationId,
+                name = nameDraft,
+                latitude = latitudeDraft,
+                longitude = longitudeDraft,
+                bestTime = bestTimeDraft,
+                notes = notesDraft,
+                referencePhotoUri = referencePhotoUriDraft,
+            ),
+            currentLocationState = currentLocationState,
+            statusMessage = status,
+            onDismiss = ::clearEditor,
+            onNameChange = { nameDraft = it },
+            onLatitudeChange = { latitudeDraft = it },
+            onLongitudeChange = { longitudeDraft = it },
+            onBestTimeChange = { bestTimeDraft = it },
+            onNotesChange = { notesDraft = it },
+            onPickReferencePhoto = {
+                referencePhotoPickerLauncher.launch(arrayOf("image/*"))
+            },
+            onClearReferencePhoto = { referencePhotoUriDraft = "" },
+            onSave = {
+                viewModel.save(
+                    id = editingLocationId,
+                    name = nameDraft,
+                    latitude = latitudeDraft.toDoubleOrNull(),
+                    longitude = longitudeDraft.toDoubleOrNull(),
+                    notes = notesDraft,
+                    bestTime = bestTimeDraft,
+                    referencePhotoUri = referencePhotoUriDraft,
+                    onSuccess = { clearEditor() },
+                )
+            },
         )
     }
 
-    if (editing != null) {
-        LocationDialog(
-            state = editing!!,
-            currentLocationState = currentLocationState,
-            onDismiss = { editing = null },
-            onNameChange = { editing = editing?.copy(name = it) },
-            onLatitudeChange = { editing = editing?.copy(latitude = it) },
-            onLongitudeChange = { editing = editing?.copy(longitude = it) },
-            onBestTimeChange = { editing = editing?.copy(bestTime = it) },
-            onNotesChange = { editing = editing?.copy(notes = it) },
-            onSave = {
-                val current = editing ?: return@LocationDialog
-                viewModel.save(
-                    id = current.id,
-                    name = current.name,
-                    latitude = current.latitude.toDoubleOrNull(),
-                    longitude = current.longitude.toDoubleOrNull(),
-                    notes = current.notes,
-                    bestTime = current.bestTime,
-                )
-                editing = null
-            },
+    if (previewLocation != null && previewLocation.latitude != null && previewLocation.longitude != null) {
+        LocationMapDialog(
+            location = previewLocation,
+            onDismiss = { previewLocationId = 0L },
         )
     }
 
@@ -96,7 +160,7 @@ fun LocationsScreen(
     ) {
         item {
             OutlinedButton(
-                onClick = { editing = LocationEditorState() },
+                onClick = { openEditor(null) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
@@ -115,7 +179,8 @@ fun LocationsScreen(
         items(locations, key = { it.id }) { location ->
             LocationCard(
                 location = location,
-                onEdit = { editing = location.toEditorState() },
+                onViewMap = { previewLocationId = location.id },
+                onEdit = { openEditor(location) },
                 onDelete = { viewModel.delete(location) },
             )
         }
@@ -125,6 +190,7 @@ fun LocationsScreen(
 @Composable
 private fun LocationCard(
     location: LocationEntity,
+    onViewMap: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -147,10 +213,20 @@ private fun LocationCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                TextButton(onClick = onViewMap) {
+                    Text("View map")
+                }
             }
             if (location.bestTime.isNotBlank()) {
                 Text(
                     text = "Best: ${location.bestTime}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (location.referencePhotoUri.isNotBlank()) {
+                Text(
+                    text = "Reference photo: ${documentAttachmentLabel(location.referencePhotoUri)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -170,12 +246,15 @@ private fun LocationCard(
 private fun LocationDialog(
     state: LocationEditorState,
     currentLocationState: CurrentLocationRequestState,
+    statusMessage: String?,
     onDismiss: () -> Unit,
     onNameChange: (String) -> Unit,
     onLatitudeChange: (String) -> Unit,
     onLongitudeChange: (String) -> Unit,
     onBestTimeChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
+    onPickReferencePhoto: () -> Unit,
+    onClearReferencePhoto: () -> Unit,
     onSave: () -> Unit,
 ) {
     AlertDialog(
@@ -192,8 +271,45 @@ private fun LocationDialog(
                     LabeledField("Longitude", state.longitude, onLongitudeChange, modifier = Modifier.weight(1f), suffix = "°")
                 }
                 CurrentLocationAction(state = currentLocationState)
+                Text(
+                    text = "Reference photo",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = if (state.referencePhotoUri.isBlank()) {
+                        "No reference photo attached yet."
+                    } else {
+                        "Attached: ${documentAttachmentLabel(state.referencePhotoUri)}"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onPickReferencePhoto,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(if (state.referencePhotoUri.isBlank()) "Choose photo" else "Replace photo")
+                    }
+                    if (state.referencePhotoUri.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = onClearReferencePhoto,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Clear photo")
+                        }
+                    }
+                }
                 LabeledField("Best time", state.bestTime, onBestTimeChange, keyboardType = KeyboardType.Text)
                 LabeledField("Notes", state.notes, onNotesChange, keyboardType = KeyboardType.Text, singleLine = false)
+                statusMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         },
         confirmButton = {
@@ -205,13 +321,3 @@ private fun LocationDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
-
-private fun LocationEntity.toEditorState(): LocationEditorState =
-    LocationEditorState(
-        id = id,
-        name = name,
-        latitude = latitude?.let(::formatCoordinateInput) ?: "",
-        longitude = longitude?.let(::formatCoordinateInput) ?: "",
-        bestTime = bestTime,
-        notes = notes,
-    )

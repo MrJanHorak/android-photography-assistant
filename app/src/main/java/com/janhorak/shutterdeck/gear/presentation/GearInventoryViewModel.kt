@@ -1,7 +1,6 @@
 package com.janhorak.shutterdeck.gear.presentation
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
@@ -23,6 +22,7 @@ import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
 import com.janhorak.shutterdeck.core.data.db.GearMaintenanceEntryEntity
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardDao
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardEntity
+import com.janhorak.shutterdeck.core.storage.ReferencePhotoGrantManager
 import com.janhorak.shutterdeck.gear.domain.GearInsuranceExportItem
 import com.janhorak.shutterdeck.gear.domain.GearInsuranceSummary
 import com.janhorak.shutterdeck.gear.domain.GearLoanReminder
@@ -102,8 +102,9 @@ data class LensThreadCompatibilitySummary(
 
 @HiltViewModel
 class GearInventoryViewModel @Inject constructor(
-    @ApplicationContext private val appContext: Context,
+    @param:ApplicationContext private val appContext: Context,
     private val gearItemDao: GearItemDao,
+    private val referencePhotoGrantManager: ReferencePhotoGrantManager,
     private val gearFilterDao: GearFilterDao,
     private val gearBatteryDao: GearBatteryDao,
     private val gearMemoryCardDao: GearMemoryCardDao,
@@ -321,7 +322,7 @@ class GearInventoryViewModel @Inject constructor(
                 ?.referencePhotoUri
                 .orEmpty()
             if (
-                !updateReferencePhotoGrant(
+                !referencePhotoGrantManager.updateGearReferencePhotoGrant(
                     itemId = draft.id,
                     previousUriString = previousReferencePhotoUri,
                     nextUriString = draft.referencePhotoUri,
@@ -357,7 +358,7 @@ class GearInventoryViewModel @Inject constructor(
 
     fun delete(item: GearItemEntity) {
         viewModelScope.launch {
-            releaseReferencePhotoGrant(
+            referencePhotoGrantManager.releaseGearReferencePhotoGrant(
                 uriString = item.referencePhotoUri,
                 excludingItemId = item.id,
             )
@@ -661,74 +662,6 @@ class GearInventoryViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateReferencePhotoGrant(
-        itemId: Long,
-        previousUriString: String,
-        nextUriString: String,
-    ): Boolean = withContext(Dispatchers.IO) {
-        val previous = previousUriString.trim()
-        val next = nextUriString.trim()
-        if (previous == next) return@withContext true
-
-        val resolver = appContext.contentResolver
-        if (next.isNotBlank()) {
-            val nextUri = Uri.parse(next)
-            val alreadyHeld = resolver.persistedUriPermissions.any {
-                it.uri == nextUri && it.isReadPermission
-            }
-            if (!alreadyHeld) {
-                try {
-                    resolver.takePersistableUriPermission(
-                        nextUri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                    )
-                } catch (_: SecurityException) {
-                    return@withContext false
-                }
-            }
-        }
-
-        if (!isReferencePhotoStillUsed(previous, excludingItemId = itemId)) {
-            releasePersistedReadGrant(previous)
-        }
-        true
-    }
-
-    private suspend fun releaseReferencePhotoGrant(
-        uriString: String,
-        excludingItemId: Long,
-    ) {
-        withContext(Dispatchers.IO) {
-            val trimmedUri = uriString.trim()
-            if (!isReferencePhotoStillUsed(trimmedUri, excludingItemId = excludingItemId)) {
-                releasePersistedReadGrant(trimmedUri)
-            }
-        }
-    }
-
-    private fun isReferencePhotoStillUsed(uriString: String, excludingItemId: Long): Boolean {
-        val trimmedUri = uriString.trim()
-        if (trimmedUri.isBlank()) return false
-        return items.value.any { item ->
-            item.id != excludingItemId && item.referencePhotoUri.trim() == trimmedUri
-        }
-    }
-
-    private fun releasePersistedReadGrant(uriString: String) {
-        if (uriString.isBlank()) return
-
-        val resolver = appContext.contentResolver
-        val uri = Uri.parse(uriString)
-        val held = resolver.persistedUriPermissions.any {
-            it.uri == uri && it.isReadPermission
-        }
-        if (held) {
-            resolver.releasePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
-        }
-    }
 }
 
 private fun bodySeed(profile: CameraBodyProfile): GearItemEntity {

@@ -9,6 +9,7 @@ import com.janhorak.shutterdeck.core.data.db.ShootDao
 import com.janhorak.shutterdeck.core.data.db.ShootEntity
 import com.janhorak.shutterdeck.core.data.db.ShotItemEntity
 import com.janhorak.shutterdeck.navigation.Routes
+import com.janhorak.shutterdeck.planner.domain.reorderShotsWithinStatusGroup
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -81,7 +82,31 @@ class ShootDetailViewModel @Inject constructor(
         viewModelScope.launch { dao.upsertShot(shot.copy(done = !shot.done)) }
     }
 
+    fun moveShotUp(shot: ShotItemEntity) {
+        reorderShot(shot = shot, moveBy = -1)
+    }
+
+    fun moveShotDown(shot: ShotItemEntity) {
+        reorderShot(shot = shot, moveBy = 1)
+    }
+
     fun delete(shot: ShotItemEntity) {
         viewModelScope.launch { dao.deleteShot(shot) }
+    }
+
+    private fun reorderShot(
+        shot: ShotItemEntity,
+        moveBy: Int,
+    ) {
+        val reorderedGroup = reorderShotsWithinStatusGroup(
+            shots = shots.value,
+            shotId = shot.id,
+            moveBy = moveBy,
+        )
+        if (reorderedGroup.isEmpty()) return
+
+        viewModelScope.launch {
+            dao.upsertShots(reorderedGroup)
+        }
     }
 }

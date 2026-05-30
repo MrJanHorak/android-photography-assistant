@@ -30,19 +30,18 @@ push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now com
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
 tests.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v14) + DataStore,
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v15) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **132 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **136 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Planner polish (P3/P4)** still has useful follow-through work: map view and
-   reference-photo attachments for saved scouting locations, plus optional shot reordering, now
-   that shoot-to-location linking, current-location autofill, and per-shot gear/notes are live.
-2. **Phase 7 quick wins** remain attractive follow-ons: spirit level, gray-card screen, and
+1. **Phase 7 quick wins** remain attractive follow-ons: spirit level, gray-card screen, and
    composition overlays on the CameraX preview.
+2. **Phase 6/7 utility backlog** is still open: business and on-shoot helpers remain the next
+   broad expansion area now that planner, gear, film, and calculator foundations are stable.
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
 
 ---
@@ -128,11 +127,13 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
   (`ExposureOption`, `ShutterOption`, `ReflectiveMeterReading`) now live in `metering/domain/`,
   with matching JVM tests locking the behavior in place.
 
-- **Planner-polish progress (2026-05-30).** Shoots can now link to saved scouting locations:
+- **Planner-polish completion (2026-05-30).** Shoots can now link to saved scouting locations:
   `ShootEntity` has an optional `locationId`, `ShootsScreen.kt` supports create/edit with a
   nullable location picker plus in-list location labels, and `ShootDetailScreen.kt` surfaces the
-  linked location context or a graceful "location removed" state. Remaining planner follow-through
-  is richer per-shot notes/gear, a map view for locations, and reference-photo attachments.
+  linked location context or a graceful "location removed" state. Saved locations with coordinates
+  now open a full-width OpenStreetMap preview plus an external map-app fallback, and
+  `ShootDetailScreen.kt` now supports move-up/move-down shot reordering backed by the pure
+  `planner/domain/ShotOrdering.kt` helper. This closes the planned P3/P4 planner follow-through.
 
 - **Location autofill progress (2026-05-30).** Manual coordinate entry now has a **Use current
   location** path in `LocationsScreen.kt`, `SunTimesScreen.kt`, and `SunMoonPositionScreen.kt`.
@@ -144,6 +145,12 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
   gear notes and capture notes, and `ShootDetailScreen.kt` replaced its one-line shot adder with a
   reusable create/edit dialog that preserves each shot's checklist state and ordering while
   surfacing concise gear/note previews inline.
+
+- **Location media progress (2026-05-30).** Saved scouting locations now support one lightweight
+  reference photo via persisted document URI. `LocationEntity` gained `referencePhotoUri`,
+  `LocationsScreen.kt` supports choose/replace/clear attachment actions, and
+  `ReferencePhotoGrantManager.kt` coordinates URI-grant reuse across Gear + Locations while
+  `AppDatabase.MIGRATION_14_15` upgrades existing installs without wiping planner data.
 
 - **[M1] Exposure recipe summary card.** Compact card combining shutter target,
   aperture, ISO, and the priority-based adjustment path. *Acceptance:* card shows a
@@ -199,12 +206,16 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
 - **[P3] Saved locations / scouting. ✅** Room-backed CRUD: name, GPS, notes, best time.
   `LocationEntity`/`LocationDao`/`LocationsViewModel`/`LocationsScreen`.
   *Update:* add/edit flows now support either manual coordinates or **Use current location** from
-  the phone. *Still TODO (nice-to-have):* attached reference photos, map pin/map view.
+  the phone, plus one lightweight reference photo attachment stored as a persisted document URI.
+  `AppDatabase` now includes an explicit `14→15` migration for the new `referencePhotoUri`
+  column, and saved locations with coordinates now open an in-app OpenStreetMap preview with an
+  external map-app fallback.
 - **[P4] Shot list / shoot planner. ✅** Room-backed: create a shoot, add/check/delete shots,
   progress count, cascade-delete. `ShootEntity`+`ShotItemEntity`/`ShootDao`/`ShootsViewModel`+
   `ShootDetailViewModel`/`ShootsScreen`+`ShootDetailScreen`.
   *Update:* shoots can now link to a saved scouting location, and each planned shot can now store
-  optional gear + notes via the detail editor. *Still TODO (nice-to-have):* shot reordering.
+  optional gear + notes via the detail editor. Optional shot reordering is now supported with
+  move-up / move-down controls that preserve the open/completed grouping.
 - **[P5] Weather snapshot (optional API).** Cloud cover, sun, precipitation for a
   location/time. Requires an API key + graceful offline degradation.
 - **[P6] Milky Way / astro season planner.** Galactic-core visibility windows by date
@@ -348,10 +359,9 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Planner polish (P3/P4)**: enrich per-shot notes/gear, add a map view for locations,
-   and support reference-photo attachments on top of the new shoot-to-location linking.
-6. **Phase 7 quick wins** — spirit level, gray-card screen, and CameraX composition overlays.
-7. **Phase 6/7** — business + on-shoot utilities as the app matures.
+5. **NEXT → Phase 7 quick wins** — spirit level, gray-card screen, and CameraX composition overlays.
+6. **Phase 6/7** — business + on-shoot utilities as the app matures.
+7. **Phase 8** — formalize the KMP `shared` module once feature breadth stabilizes.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.
 
 > Rule of thumb for contributors: **put math in `domain` (no Android imports), keep
