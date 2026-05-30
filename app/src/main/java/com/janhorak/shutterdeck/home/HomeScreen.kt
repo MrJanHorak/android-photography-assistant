@@ -68,6 +68,7 @@ private val toolSections = listOf(
             ToolEntry("Spirit Level", "Pitch / roll bubble level", Routes.SPIRIT_LEVEL),
             ToolEntry("Gray Card", "Full-screen gray / white / black reference", Routes.GRAY_CARD),
             ToolEntry("Composition Overlays", "Rule-of-thirds, golden ratio & diagonals", Routes.COMPOSITION_OVERLAYS),
+            ToolEntry("Live Histogram & Zebra", "Live luminance distribution & clipped highlights", Routes.LIVE_HISTOGRAM),
         ),
     ),
 )

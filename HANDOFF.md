@@ -16,14 +16,14 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**17 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**18 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
 10. Equivalent Exposure · 11. Macro / Extension · 12. Diffraction Limit ·
 13. Golden Hour (sun times) · 14. Sun & Moon position + moon phase ·
 15. Spirit Level / horizon · 16. Gray Card / white-balance reference ·
-17. Composition Overlays / framing guides.
+17. Composition Overlays / framing guides · 18. Live Histogram & Zebra.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -122,6 +122,14 @@ preview. The camera binding logic now lives in shared `ui/camera/BackCameraPrevi
 `Preview` use case so future multi-use-case camera tools (like histogram/zebra) can reuse the same
 preview path safely. Shared camera permission checks now live in `ui/camera/CameraPermissionUtil.kt`.
 
+That shared preview path now also powers **Live Histogram & Zebra**. The new
+`utilities/presentation/HistogramZebraScreen.kt` opens another immersive full-screen camera route,
+while `ui/camera/BackCameraPreview.kt` can now optionally bind a throttled `ImageAnalysis` use case
+in the same `UseCaseGroup` as preview so the viewport stays aligned. `utilities/data/LiveLuminanceAnalyzer.kt`
+copies the cropped Y plane while respecting `cropRect` + `rowStride`, throttles updates to roughly
+10 fps, and feeds pure `utilities/domain/HistogramZebraAnalysis.kt` helpers that build the live
+histogram bins and coarse zebra-cell activation data covered by JVM tests.
+
 Structured date/time entry now also uses shared picker-backed controls wherever the app expects a
 real formatted date or time. `planner/presentation/ShootsScreen.kt`, the Gear purchase /
 maintenance / loan / battery / card editors, `FilmRollsScreen.kt`, `FilmRollDetailScreen.kt`,
@@ -188,14 +196,17 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 - `ui/effects/` — `KeepScreenOn`, `LockPortraitOrientation`, `ImmersiveScreenMode`,
   `ReferenceDisplayMode` (full-screen tool/session effects for camera, calibration, and sensor
   screens).
-- `ui/camera/` — `BackCameraPreview` (shared back-camera preview binding for metering and
-  composition overlays), `CameraPermissionUtil` (shared camera-permission check).
-- `utilities/domain/` — `GrayCardReference`, `SpiritLevelMath`, `CompositionOverlayGuides`
-  (gamma-correct reference presets, pure tilt math, and normalized overlay-guide geometry).
+- `ui/camera/` — `BackCameraPreview` (shared back-camera preview binding with optional
+  `ImageAnalysis` support for metering and camera utilities), `CameraPermissionUtil`
+  (shared camera-permission check).
+- `utilities/domain/` — `GrayCardReference`, `SpiritLevelMath`, `CompositionOverlayGuides`,
+  `HistogramZebraAnalysis` (gamma-correct reference presets, pure tilt math, normalized
+  overlay-guide geometry, and pure histogram/zebra luminance analysis).
 - `utilities/data/` — `SpiritLevelSensorRepository` (gravity-sensor primary, accelerometer
-  fallback).
+  fallback), `LiveLuminanceAnalyzer` (cropped Y-plane analysis bridge for the live histogram/zebra
+  tool).
 - `utilities/presentation/` — `GrayCardScreen`, `SpiritLevelScreen`, `SpiritLevelViewModel`,
-  `CompositionOverlayScreen` (full-screen On-Shoot Utilities).
+  `CompositionOverlayScreen`, `HistogramZebraScreen` (full-screen On-Shoot Utilities).
 - `core/time/` — `StructuredDateTime` (shared ISO date / time / timestamp parse-format helpers for
   picker-backed inputs across Gear, Film, Planner, and astronomy tools).
 - `ui/components/` — `PickerFields` (shared Compose date/time/date-time picker buttons + dialogs,
@@ -278,7 +289,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 149 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 151 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -341,11 +352,12 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 7 quick wins (U4):** live histogram & zebra on the shared CameraX preview path.
+1. **Phase 7 / U2:** intervalometer / time-lapse planner is the next clean on-shoot utility slice
+   now that the shared CameraX-preview follow-through is complete.
 2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
-3. **Phase 6/7 backlog** — business and on-shoot utilities remain the next broad feature area
-   now that planner polish is complete.
+3. **Phase 6/7 backlog** — business and remaining on-shoot utilities remain the next broad feature
+   area now that planner polish and the shared camera utilities are in a good place.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
 EV↔lux↔foot-candle converter; Kelvin/mired WB converter; ft/m & °C/°F unit converter;
@@ -385,6 +397,9 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
   Room-backed records. Push/pull latitude depends on a live stock entry for `maxPushStops` /
   `maxPullStops`, while reciprocity remains available from roll snapshots because rolls persist the
   reciprocity exponent/onset fields.
+- Live histogram/zebra currently analyzes the preview's luminance plane, not RAW sensor data. The
+  zebra overlay is intentionally a **coarse grid** rather than a per-pixel mask so the live preview
+  stays responsive on-device.
 - Built-in film reciprocity curves are **starter fits**, not authoritative datasheet replacements.
   Users should keep their own tested custom stock entries when their long-exposure notes differ.
 - Gear reference photos are stored as persisted document URI strings; the screen currently shows
@@ -393,8 +408,9 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 - `LightMeterScreen.kt` is much more presentation-focused after the completed meter-polish pass,
   but it is still a large Compose file; split it only when another feature change creates a clear,
   low-risk opportunity.
-- Room is now at **DB v13** after adding optional `ShootEntity.locationId`; the app still uses
-  `fallbackToDestructiveMigration(dropAllTables = true)` rather than hand-written migrations.
+- Room is now at **DB v15** after adding location `referencePhotoUri`; the app still uses
+  `fallbackToDestructiveMigration(dropAllTables = true)` rather than hand-written migrations for
+  older schema jumps.
 - KMP `shared` module not yet extracted (Phase 8). Keep domain Android-free to make it cheap.
 - No instrumented/Robolectric tests for DAOs (project is JVM-unit-test only) — DAO logic is
   thin and matches the untested `ScenePresetDao` precedent.

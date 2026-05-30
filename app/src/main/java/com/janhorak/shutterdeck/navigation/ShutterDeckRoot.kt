@@ -51,6 +51,7 @@ import com.janhorak.shutterdeck.planner.presentation.ShootsScreen
 import com.janhorak.shutterdeck.settings.SettingsScreen
 import com.janhorak.shutterdeck.utilities.presentation.CompositionOverlayScreen
 import com.janhorak.shutterdeck.utilities.presentation.GrayCardScreen
+import com.janhorak.shutterdeck.utilities.presentation.HistogramZebraScreen
 import com.janhorak.shutterdeck.utilities.presentation.SpiritLevelScreen
 
 /** Root composable: app bar + bottom navigation hosting the navigation graph. */
@@ -66,6 +67,7 @@ fun ShutterDeckRoot() {
         Routes.GRAY_CARD,
         Routes.SPIRIT_LEVEL,
         Routes.COMPOSITION_OVERLAYS,
+        Routes.LIVE_HISTOGRAM,
     )
     val hideChrome = currentRoute in chromeHiddenRoutes
 
@@ -161,6 +163,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.COMPOSITION_OVERLAYS) {
                 CompositionOverlayScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.LIVE_HISTOGRAM) {
+                HistogramZebraScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.MACRO) {
                 MacroScreen()
