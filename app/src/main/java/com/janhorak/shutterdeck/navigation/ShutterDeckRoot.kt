@@ -49,6 +49,8 @@ import com.janhorak.shutterdeck.planner.presentation.PlannerScreen
 import com.janhorak.shutterdeck.planner.presentation.ShootDetailScreen
 import com.janhorak.shutterdeck.planner.presentation.ShootsScreen
 import com.janhorak.shutterdeck.settings.SettingsScreen
+import com.janhorak.shutterdeck.utilities.presentation.GrayCardScreen
+import com.janhorak.shutterdeck.utilities.presentation.SpiritLevelScreen
 
 /** Root composable: app bar + bottom navigation hosting the navigation graph. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,45 +61,50 @@ fun ShutterDeckRoot() {
     val currentRoute = backStackEntry?.destination?.route
     val topLevelRoutes = TopLevelDestination.entries.map { it.route }.toSet()
     val showBackButton = currentRoute != null && currentRoute !in topLevelRoutes
+    val hideChrome = currentRoute == Routes.GRAY_CARD || currentRoute == Routes.SPIRIT_LEVEL
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(titleForRoute(currentRoute)) },
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                            )
+            if (!hideChrome) {
+                TopAppBar(
+                    title = { Text(titleForRoute(currentRoute)) },
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                )
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
         bottomBar = {
-            NavigationBar {
-                TopLevelDestination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentRoute == destination.route,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (!hideChrome) {
+                NavigationBar {
+                    TopLevelDestination.entries.forEach { destination ->
+                        NavigationBarItem(
+                            selected = currentRoute == destination.route,
+                            onClick = {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = destination.label,
-                            )
-                        },
-                        label = { Text(destination.label) },
-                    )
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = destination.icon,
+                                    contentDescription = destination.label,
+                                )
+                            },
+                            label = { Text(destination.label) },
+                        )
+                    }
                 }
             }
         },
@@ -105,7 +112,7 @@ fun ShutterDeckRoot() {
         NavHost(
             navController = navController,
             startDestination = Routes.TOOLS,
-            modifier = Modifier.padding(innerPadding),
+            modifier = if (hideChrome) Modifier else Modifier.padding(innerPadding),
         ) {
             composable(Routes.TOOLS) {
                 HomeScreen(onToolClick = { route -> navController.navigate(route) })
@@ -139,6 +146,12 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.EQUIVALENT_EXPOSURE) {
                 EquivalentExposureScreen()
+            }
+            composable(Routes.SPIRIT_LEVEL) {
+                SpiritLevelScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.GRAY_CARD) {
+                GrayCardScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.MACRO) {
                 MacroScreen()

@@ -16,12 +16,13 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**14 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output**:
+**16 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
 10. Equivalent Exposure · 11. Macro / Extension · 12. Diffraction Limit ·
-13. Golden Hour (sun times) · 14. Sun & Moon position + moon phase.
+13. Golden Hour (sun times) · 14. Sun & Moon position + moon phase ·
+15. Spirit Level / horizon · 16. Gray Card / white-balance reference.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -101,6 +102,17 @@ without requiring an API key. `ShootDetailScreen.kt` also now supports move-up /
 reordering within the open and completed groups, with pure reorder logic in
 `planner/domain/ShotOrdering.kt`.
 
+**Phase 7 quick wins** are now underway too. The Tools grid includes a new **Gray Card** entry that
+opens a dedicated full-screen calibration route with gamma-correct 18% gray plus white/black
+presets. `GrayCardScreen.kt` hides app chrome via `ShutterDeckRoot.kt`, keeps the display awake,
+drives screen brightness to max while open, and uses `ui/effects/ReferenceDisplayMode.kt` to keep
+the reference unobstructed for field metering or quick white-balance use.
+
+That same **On-Shoot Utilities** section now also includes **Spirit Level**. `SpiritLevelScreen.kt`
+adds a full-screen bubble level with numeric pitch/roll readouts, `SpiritLevelSensorRepository.kt`
+prefers the gravity sensor and falls back to the accelerometer, and the screen locks portrait while
+active so the tilt math can stay simple and correct instead of remapping every display rotation.
+
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
    with brand/model, serial, purchase date, purchase/current value, weight, notes, optional saved
@@ -153,8 +165,17 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 ### Package map (`app/src/main/java/com/janhorak/shutterdeck/`)
 - `MainActivity.kt`, `ShutterDeckApp.kt` (`@HiltAndroidApp`), `AppViewModel.kt` (theme).
 - `navigation/` — `Routes`, `TopLevelDestination`, `titleForRoute()` (Destinations.kt);
-  `ShutterDeckRoot.kt` (Scaffold + bottom nav + `NavHost`).
+  `ShutterDeckRoot.kt` (Scaffold + bottom nav + `NavHost`, plus per-route chrome suppression for
+  full-screen reference screens).
 - `home/HomeScreen.kt` — the sectioned Tools grid (`toolSections`).
+- `ui/effects/` — `KeepScreenOn`, `LockPortraitOrientation`, `ReferenceDisplayMode`
+  (full-screen tool/session effects for calibration and sensor screens).
+- `utilities/domain/` — `GrayCardReference` + `SpiritLevelMath`
+  (gamma-correct reference presets plus pure tilt math for Spirit Level).
+- `utilities/data/` — `SpiritLevelSensorRepository` (gravity-sensor primary, accelerometer
+  fallback).
+- `utilities/presentation/` — `GrayCardScreen`, `SpiritLevelScreen`, `SpiritLevelViewModel`
+  (full-screen On-Shoot Utilities).
 - `film/data/` — `FilmStockCatalogLoader` (bundled JSON parser/fallback loader),
   `FilmStockRepository` (seed bundled starter stocks into Room, enforce read-only built-ins).
 - `film/domain/` — `FilmRollExport` (pure CSV export + filename helpers), `FilmRollLog`
@@ -233,7 +254,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 136 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 143 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -296,8 +317,7 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
-   composition overlays on the CameraX preview.
+1. **Phase 7 quick wins (U5):** composition overlays on the CameraX preview.
 2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
 3. **Phase 6/7 backlog** — business and on-shoot utilities remain the next broad feature area

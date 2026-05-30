@@ -20,7 +20,8 @@ later phases depend on the Phase 0 foundation.
 
 **Status:** Phase 0 (foundation) ✅, Phase 1 meter polish ✅, Phase 2 (all 11 calculators C1–C11) ✅,
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅,
-Phase 4 Gear G1–G7 ✅, and Phase 5 **FL1–FL5 film suite** ✅.
+Phase 4 Gear G1–G7 ✅, Phase 5 **FL1–FL5 film suite** ✅, and Phase 7 **U1 Spirit level** +
+**U3 Gray-card / white-balance screen** ✅.
 The **Tools** grid is now sectioned for scanability, the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
 battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export,
@@ -28,18 +29,19 @@ and the new **Film** tab now provides a Room-backed stock library, roll logger, 
 push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now complete too:
 `LightMeterScreen.kt` delegates shooting-aid state, workflow coaching, nearest-option matching,
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
-tests.
+tests. The new **On-Shoot Utilities** section now adds both **Spirit Level** and **Gray Card**:
+full-screen field tools with hidden app chrome, keep-awake display behavior, and dedicated
+sensor/reference UIs for on-shoot use.
 
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v15) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **136 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **143 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Phase 7 quick wins** remain attractive follow-ons: spirit level, gray-card screen, and
-   composition overlays on the CameraX preview.
+1. **Phase 7 quick wins** now mainly narrow to composition overlays on the CameraX preview.
 2. **Phase 6/7 utility backlog** is still open: business and on-shoot helpers remain the next
    broad expansion area now that planner, gear, film, and calculator foundations are stable.
 3. **No KMP `shared` module yet** (Phase 8); domain stays Android-free in the meantime.
@@ -305,11 +307,16 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
 
 ### Phase 7 — On-shoot utilities (P3; sensors/camera)
 
-- **[U1] Spirit level / horizon.** Accelerometer-based level + pitch/roll readout.
+- **[U1] Spirit level / horizon. ✅** Accelerometer-based level + pitch/roll readout.
+  *Update:* the Tools grid now links to a dedicated full-screen Spirit Level route with a large
+  bubble dial, pitch/roll readouts, portrait lock for safer leveling math, gravity-sensor primary
+  input with accelerometer fallback, and keep-awake behavior while the level is open.
 - **[U2] Intervalometer / time-lapse planner.** Interval, count, clip-length, card/
   battery estimate. (Triggering the camera needs hardware support; start as planner.)
-- **[U3] Gray-card / white-balance screen.** Full-screen 18% gray and white/black
-  reference; calibration target.
+- **[U3] Gray-card / white-balance screen. ✅** Full-screen 18% gray and white/black
+  reference; calibration target. *Update:* the Tools grid now links to a dedicated full-screen
+  route that hides app chrome, keeps the display awake, forces max screen brightness while open,
+  and swaps between gamma-correct 18% gray, white, and black reference presets.
 - **[U4] Live histogram & zebra.** From the CameraX preview already in the app.
 - **[U5] Composition overlays.** Rule-of-thirds, golden ratio, diagonals over preview.
 - **[U6] Digital slate / clapperboard.** For video/hybrid shooters.
@@ -359,7 +366,7 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 7 quick wins** — spirit level, gray-card screen, and CameraX composition overlays.
+5. **NEXT → Phase 7 quick wins** — CameraX composition overlays.
 6. **Phase 6/7** — business + on-shoot utilities as the app matures.
 7. **Phase 8** — formalize the KMP `shared` module once feature breadth stabilizes.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.

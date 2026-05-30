@@ -61,6 +61,14 @@ private val toolSections = listOf(
             ToolEntry("Print Size", "Pixels to print size at DPI", Routes.PRINT_SIZE),
         ),
     ),
+    ToolSection(
+        title = "On-Shoot Utilities",
+        subtitle = "Quick field references that benefit from a live screen or sensors.",
+        tools = listOf(
+            ToolEntry("Spirit Level", "Pitch / roll bubble level", Routes.SPIRIT_LEVEL),
+            ToolEntry("Gray Card", "Full-screen gray / white / black reference", Routes.GRAY_CARD),
+        ),
+    ),
 )
 
 /** Home hub: a grid of available tools. */
