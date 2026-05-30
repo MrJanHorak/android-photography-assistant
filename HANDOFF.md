@@ -61,13 +61,19 @@ compensation stops, surface stock notes when available, and generate a clipboard
 Because rolls snapshot reciprocity exponent/onset values, the reciprocity helper still works from a
 roll even if the linked stock is later removed from the library.
 
-**Phase 1 meter polish** has resumed as the next roadmap slice. `metering/domain/ShootingAid.kt`
-now owns the pure shooting-aid models and helpers that used to live inside
-`LightMeterScreen.kt`: subject-motion profiles, stabilization modes, built-in scene presets,
-available stabilization-mode resolution, scene-preset matching, and the structured qualitative
-assessment shown in the shooting-aid card. `LightMeterScreen.kt` now consumes those domain helpers;
-the remaining workflow-coaching / nearest-option logic is still in presentation and is the next
-meter extraction target.
+**Phase 1 meter polish** is now complete. `LightMeterScreen.kt` delegates its remaining business
+logic to pure `metering/domain/` helpers: `ShootingAid.kt` owns subject-motion/stabilization/preset
+logic, `WorkflowCoaching.kt` owns workflow-priority coaching plus nearest-option helpers, and
+`MeterReadout.kt` owns suggested-shutter and camera-AE summary formatting. Shared metering models
+(`ExposureOption`, `ShutterOption`, `ReflectiveMeterReading`) now live in `metering/domain/` too,
+so the screen is effectively presentation/layout-focused again while the behavior stays covered by
+JVM tests.
+
+**Planner polish** has also started. Shoots can now optionally link to saved scouting locations:
+`ShootEntity` gained `locationId`, `ShootsScreen.kt` now supports editing shoots and choosing or
+clearing a saved location, the shoot list shows linked-location labels, and
+`ShootDetailScreen.kt` shows the linked location context (name, coordinates, best time, notes) or
+a graceful missing-location state if the saved location was removed later.
 
 **Gear tab** now has nine useful capabilities:
 1. **Inventory foundation + richer metadata** — add/edit/delete bodies, lenses and accessories
@@ -129,9 +135,12 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   (roll statuses, default timestamps), `FilmDevelopment` (dilution math, temperature compensation,
   agitation cues, fixed recipe-step builder), `FilmPushPull` (EI delta + latitude guidance + note
   builder), `FilmReciprocity` (stock-aware reciprocity correction + note builder).
-- `metering/domain/` — exposure math/formatting helpers plus `ShootingAid` (subject-motion +
-  stabilization models, scene presets, available-mode resolution, preset matching, qualitative
-  shooting-aid assessment).
+- `metering/domain/` — exposure math/formatting helpers plus shared metering models
+  (`ExposureOption`, `ShutterOption`, `ReflectiveMeterReading`), `ShootingAid`
+  (subject-motion + stabilization models, scene presets, available-mode resolution, preset
+  matching, qualitative shooting-aid assessment), `WorkflowCoaching`
+  (workflow-priority guidance + nearest-option helpers), and `MeterReadout`
+  (suggested-shutter + camera-AE summary formatting).
 - `film/presentation/` — `FilmScreen` (hub), `FilmStocksScreen`, `FilmStocksViewModel`,
   `FilmRollsScreen`, `FilmRollsViewModel`, `FilmRollDetailScreen`, `FilmRollDetailViewModel`,
   `FilmDevelopmentScreen`, `FilmDevelopmentViewModel`, `FilmReferenceViewModel`,
@@ -192,7 +201,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 120 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 132 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -255,13 +264,12 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 1 meter polish** — continue from the finished shooting-aid extraction by moving the
-   remaining workflow-coaching / nearest-option logic out of `LightMeterScreen.kt` into pure
-   domain helpers and tests.
-2. **Polish P3/P4** — link a shoot to a saved location; per-shot gear/notes; map view for
-   locations; reference-photo attachments.
-3. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
+1. **Continue planner polish (P3/P4)** — build on the new shoot-to-location linking with richer
+   per-shot gear/notes, a map view for locations, and reference-photo attachments.
+2. **Phase 7 quick wins (U1/U3/U5):** spirit level (accelerometer), gray-card screen,
    composition overlays on the CameraX preview.
+3. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
+   shrinking presentation-only feature files when you touch them.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
 EV↔lux↔foot-candle converter; Kelvin/mired WB converter; ft/m & °C/°F unit converter;
@@ -303,9 +311,11 @@ dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1
 - Gear reference photos are stored as persisted document URI strings; the screen currently shows
   attachment labels only, not thumbnails, and `GearInventoryViewModel` now owns URI-permission
   acquisition/release so replace, clear, and delete do not leak grants.
-- Light meter shooting-aid logic is now in `metering/domain/ShootingAid.kt`, but the
-  workflow-coaching / nearest-option helper block still lives in
-  `metering/presentation/LightMeterScreen.kt` (large file) rather than fully in `domain`.
+- `LightMeterScreen.kt` is much more presentation-focused after the completed meter-polish pass,
+  but it is still a large Compose file; split it only when another feature change creates a clear,
+  low-risk opportunity.
+- Room is now at **DB v13** after adding optional `ShootEntity.locationId`; the app still uses
+  `fallbackToDestructiveMigration(dropAllTables = true)` rather than hand-written migrations.
 - KMP `shared` module not yet extracted (Phase 8). Keep domain Android-free to make it cheap.
 - No instrumented/Robolectric tests for DAOs (project is JVM-unit-test only) — DAO logic is
   thin and matches the untested `ScenePresetDao` precedent.

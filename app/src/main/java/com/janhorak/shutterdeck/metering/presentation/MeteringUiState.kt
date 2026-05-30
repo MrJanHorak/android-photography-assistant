@@ -1,5 +1,7 @@
 package com.janhorak.shutterdeck.metering.presentation
 
+import com.janhorak.shutterdeck.metering.domain.ReflectiveMeterReading
+
 enum class MeteringSource(
     val label: String,
     val description: String,
@@ -13,13 +15,6 @@ enum class MeteringSource(
         description = "Reflective reading from the back camera auto exposure.",
     ),
 }
-
-data class ReflectiveMeterReading(
-    val aperture: Float,
-    val shutterSeconds: Double,
-    val iso: Int,
-    val ev100: Float,
-)
 
 data class MeteringUiState(
     val selectedSource: MeteringSource = MeteringSource.AMBIENT_SENSOR,

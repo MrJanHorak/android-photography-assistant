@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.janhorak.shutterdeck.metering.domain.LightMeterRepository
+import com.janhorak.shutterdeck.metering.domain.ReflectiveMeterReading
 import com.janhorak.shutterdeck.metering.domain.reflectiveEv100
 import com.janhorak.shutterdeck.metering.domain.requiredShutterSeconds
 import dagger.hilt.android.lifecycle.HiltViewModel

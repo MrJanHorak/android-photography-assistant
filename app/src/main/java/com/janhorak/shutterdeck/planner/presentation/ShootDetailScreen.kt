@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.janhorak.shutterdeck.core.data.db.LocationEntity
 import com.janhorak.shutterdeck.core.data.db.ShotItemEntity
 import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.SectionHeader
@@ -39,9 +40,10 @@ fun ShootDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: ShootDetailViewModel = hiltViewModel(),
 ) {
-    val shoot by viewModel.shoot.collectAsStateWithLifecycle()
+    val headerState by viewModel.headerState.collectAsStateWithLifecycle()
     val shots by viewModel.shots.collectAsStateWithLifecycle()
     var newShot by remember { mutableStateOf("") }
+    val shoot = headerState.shoot
 
     val doneCount = shots.count { it.done }
 
@@ -60,6 +62,14 @@ fun ShootDetailScreen(
             )
             shoot?.notes?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        if (headerState.location != null || headerState.locationMissing) {
+            item {
+                LinkedLocationCard(
+                    location = headerState.location,
+                    locationMissing = headerState.locationMissing,
+                )
             }
         }
         item {
@@ -95,6 +105,65 @@ fun ShootDetailScreen(
                 onToggle = { viewModel.toggleDone(shot) },
                 onDelete = { viewModel.delete(shot) },
             )
+        }
+    }
+}
+
+@Composable
+private fun LinkedLocationCard(
+    location: LocationEntity?,
+    locationMissing: Boolean,
+) {
+    androidx.compose.material3.Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = "Linked location",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (location != null) {
+                Text(
+                    text = location.name,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                val latitude = location.latitude
+                val longitude = location.longitude
+                if (latitude != null && longitude != null) {
+                    Text(
+                        text = "%.4f, %.4f".format(latitude, longitude),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (location.bestTime.isNotBlank()) {
+                    Text(
+                        text = "Best time: ${location.bestTime}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (location.notes.isNotBlank()) {
+                    Text(
+                        text = location.notes,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            } else {
+                Text(
+                    text = if (locationMissing) {
+                        "Linked location removed. Edit the shoot from the shoot list to choose another spot."
+                    } else {
+                        "No linked location."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

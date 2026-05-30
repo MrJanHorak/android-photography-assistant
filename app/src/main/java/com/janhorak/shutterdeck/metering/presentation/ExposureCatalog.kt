@@ -1,16 +1,8 @@
 package com.janhorak.shutterdeck.metering.presentation
 
+import com.janhorak.shutterdeck.metering.domain.ExposureOption
+import com.janhorak.shutterdeck.metering.domain.ShutterOption
 import kotlin.math.abs
-
-internal data class ExposureOption<T : Number>(
-    val value: T,
-    val label: String,
-)
-
-internal data class ShutterOption(
-    val seconds: Double,
-    val label: String,
-)
 
 internal enum class LensMount(val label: String) {
     GENERIC("Any mount"),
