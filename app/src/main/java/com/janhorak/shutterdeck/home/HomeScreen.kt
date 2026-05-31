@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.janhorak.shutterdeck.navigation.Routes
 import com.janhorak.shutterdeck.ui.components.LabeledField
@@ -154,6 +155,7 @@ fun HomeScreen(
                 onValueChange = { searchQuery = it },
                 modifier = Modifier,
                 singleLine = true,
+                keyboardType = KeyboardType.Text,
             )
         }
         if (favoriteEntries.isNotEmpty()) {
