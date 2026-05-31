@@ -39,8 +39,9 @@ daylight, tungsten, shade, and similar references, and **Unit Converter**: a qui
 includes lightweight getting-started/help copy, and the repo root now has a `README.md` for
 high-level orientation before the more detailed contributor docs.
 The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
-**Intervalometer / time-lapse planner**, **Digital Slate**, **Composition Overlays**, and
-**Live Histogram & Zebra**, **Shot Notes**, and **Lighting Setup**: dedicated tools for on-shoot use. The intervalometer screen
+**Intervalometer / time-lapse planner**, **Dew Point**, **Digital Slate**,
+**Composition Overlays**, and **Live Histogram & Zebra**, **Shot Notes**, and **Lighting Setup**:
+dedicated tools for on-shoot use. The intervalometer screen
 intentionally starts as a planner: it calculates first-frame-to-last-frame capture windows, clip
 length, storage/card coverage, battery coverage, and exposure-vs-interval headroom from pure
 `utilities/domain/IntervalometerPlanner.kt` helpers covered by JVM tests. The digital slate route
@@ -63,7 +64,7 @@ shareable PNG diagram export path through Android's cache + `FileProvider`.
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v17) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **179 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **185 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
@@ -401,7 +402,6 @@ Quick reference grab-bag to pull future tasks from:
 - Battery-life & card-capacity estimator (RAW size × count).
 - Time-zone-aware golden-hour for travel; jet-lag-proof shoot scheduler.
 - QR/serial scanner to add gear quickly.
-- Rain/condensation warning (dew point vs gear temp) for lens fogging.
 - Sensor-dust test pattern viewer; dead/hot-pixel test screen.
 - Focus-test/resolution chart generator (print or display).
 - Metronome/agitation timer for film dev; safelight timer for darkroom.

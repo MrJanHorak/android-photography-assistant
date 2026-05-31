@@ -12,14 +12,14 @@ read `ROADMAP.md`.
 
 ### Tools tab
 
-The **Tools** tab is the biggest surface in the app. It currently includes 25 calculator/reference
+The **Tools** tab is the biggest surface in the app. It currently includes 26 calculator/reference
 tools grouped into:
 
 - **Exposure** tools such as Light Meter, ND Filter, Sunny 16, EV/Lux, Color Temperature, and Unit Converter.
 - **Lens & Focus** tools such as Depth of Field, Focus Stacking, Field of View, Macro, and Diffraction.
 - **Planning & Output** tools such as Golden Hour, Sun & Moon, and Print Size.
-- **On-Shoot Utilities** such as Spirit Level, Gray Card, Intervalometer, Digital Slate, Shot Notes,
-  Lighting Setup, Composition Overlays, and Live Histogram & Zebra.
+- **On-Shoot Utilities** such as Spirit Level, Gray Card, Intervalometer, Dew Point, Digital Slate,
+  Shot Notes, Lighting Setup, Composition Overlays, and Live Histogram & Zebra.
 
 ### Planner tab
 
@@ -95,8 +95,8 @@ Use a recent Android Studio setup with Android SDK 36 installed.
 
 The named Phase 7 utility backlog is complete. The remaining work is broader expansion and polish:
 
-- more small tools from the grab-bag backlog (for example battery/card estimator, dew-point warning,
-  and color-temperature gel math)
+- more small tools from the grab-bag backlog (for example battery/card estimator and
+  color-temperature gel math)
 - future business/pro workflow slices from the roadmap
 - Phase 8 discipline follow-through toward a shared Kotlin Multiplatform module
 

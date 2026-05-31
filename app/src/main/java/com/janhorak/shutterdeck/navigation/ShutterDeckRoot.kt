@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.janhorak.shutterdeck.calculators.presentation.AstroShutterScreen
 import com.janhorak.shutterdeck.calculators.presentation.ColorTemperatureScreen
+import com.janhorak.shutterdeck.calculators.presentation.DewPointScreen
 import com.janhorak.shutterdeck.calculators.presentation.DepthOfFieldScreen
 import com.janhorak.shutterdeck.calculators.presentation.DiffractionScreen
 import com.janhorak.shutterdeck.calculators.presentation.EquivalentExposureScreen
@@ -144,6 +145,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.UNIT_CONVERTER) {
                 UnitConverterScreen()
+            }
+            composable(Routes.DEW_POINT) {
+                DewPointScreen()
             }
             composable(Routes.INTERVALOMETER) {
                 IntervalometerPlannerScreen()

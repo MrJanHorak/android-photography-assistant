@@ -16,7 +16,7 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme + lightweight help).
 
-**25 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**26 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. EV / Lux — ambient EV100, lux, and foot-candle reference converter.
 3. Color Temperature — Kelvin ↔ mired white-balance reference.
@@ -26,9 +26,10 @@ ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tab
 13. Equivalent Exposure · 14. Macro / Extension · 15. Diffraction Limit ·
 16. Golden Hour (sun times) · 17. Sun & Moon position + moon phase ·
 18. Spirit Level / horizon · 19. Intervalometer / time-lapse planner ·
-20. Digital Slate / clapperboard · 21. Shot Notes / quick field notes ·
-22. Lighting Setup / diagrammer · 23. Gray Card / white-balance reference ·
-24. Composition Overlays / framing guides · 25. Live Histogram & Zebra.
+20. Dew Point / lens-fog warning · 21. Digital Slate / clapperboard ·
+22. Shot Notes / quick field notes · 23. Lighting Setup / diagrammer ·
+24. Gray Card / white-balance reference · 25. Composition Overlays / framing guides ·
+26. Live Histogram & Zebra.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -98,6 +99,11 @@ entry does not depend on the keyboard exposing a minus key.
 Settings & Help surface with a tab overview plus permission/immersive-tool/local-data notes, and
 the repo now has a root `README.md` for high-level orientation before diving into the denser
 technical docs.
+
+**Field-conditions follow-through** landed too. The On-Shoot Utilities section now also includes
+**Dew Point**, a quick offline lens-fog / condensation warning tool. It compares ambient air
+temperature, relative humidity, and current lens/gear temperature, then reports dew point, the
+surface-vs-dew-point margin, and a low / warning / active condensation risk.
 
 **Planner polish** has also started. Shoots can now optionally link to saved scouting locations:
 `ShootEntity` gained `locationId`, `ShootsScreen.kt` now supports editing shoots and choosing or
@@ -353,7 +359,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 179 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 185 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -422,13 +428,12 @@ The user commits the code themselves — **do not git commit** unless asked.
 2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
 3. **Easy grab-bag utility follow-through:** the small ROADMAP §4 tools (battery/card estimator,
-   dew-point warning, Kelvin/mired shift/gel math, etc.) are now the easiest path for the next
+   Kelvin/mired shift/gel math, cheat-sheet library, etc.) are now the easiest path for the next
    incremental Tools-grid addition.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
 cheat-sheet library (fireworks, milky way, waterfalls); battery/card-capacity estimator;
-dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1 test +
-1 screen following §5.
+gel/CTO-CTB calculator. Each is a ~1 domain file + 1 test + 1 screen following §5.
 
 ---
 
