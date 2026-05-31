@@ -16,17 +16,18 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**23 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**24 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. EV / Lux — ambient EV100, lux, and foot-candle reference converter.
-3. Depth of Field · 4. ND Filter · 5. Field of View · 6. Astro Shutter (500/NPF) ·
-7. Print Size · 8. Focus Stacking · 9. Sunny 16 / reciprocity · 10. Guide Number (flash) ·
-11. Equivalent Exposure · 12. Macro / Extension · 13. Diffraction Limit ·
-14. Golden Hour (sun times) · 15. Sun & Moon position + moon phase ·
-16. Spirit Level / horizon · 17. Intervalometer / time-lapse planner ·
-18. Digital Slate / clapperboard · 19. Shot Notes / quick field notes ·
-20. Lighting Setup / diagrammer · 21. Gray Card / white-balance reference ·
-22. Composition Overlays / framing guides · 23. Live Histogram & Zebra.
+3. Color Temperature — Kelvin ↔ mired white-balance reference.
+4. Depth of Field · 5. ND Filter · 6. Field of View · 7. Astro Shutter (500/NPF) ·
+8. Print Size · 9. Focus Stacking · 10. Sunny 16 / reciprocity · 11. Guide Number (flash) ·
+12. Equivalent Exposure · 13. Macro / Extension · 14. Diffraction Limit ·
+15. Golden Hour (sun times) · 16. Sun & Moon position + moon phase ·
+17. Spirit Level / horizon · 18. Intervalometer / time-lapse planner ·
+19. Digital Slate / clapperboard · 20. Shot Notes / quick field notes ·
+21. Lighting Setup / diagrammer · 22. Gray Card / white-balance reference ·
+23. Composition Overlays / framing guides · 24. Live Histogram & Zebra.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -79,6 +80,12 @@ JVM tests.
 `metering/domain/IlluminanceMath.kt` now centralizes the shared illuminance math so the new
 converter and the light meter both use the same EV100/lux convention, with JVM tests covering the
 inverse and foot-candle conversions too.
+
+**Color-temperature reference follow-through** landed as well. The Exposure section now also
+includes **Color Temperature**, a Kelvin ↔ mired white-balance converter with common WB anchors for
+daylight, tungsten, shade, and similar references. `calculators/domain/ColorTemperature.kt`
+centralizes the reciprocal color-temperature math and keeps the feature scoped to pure unit
+conversion instead of overlapping with the separate future gel calculator.
 
 **Planner polish** has also started. Shoots can now optionally link to saved scouting locations:
 `ShootEntity` gained `locationId`, `ShootsScreen.kt` now supports editing shoots and choosing or
@@ -334,7 +341,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 169 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 174 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -402,13 +409,13 @@ The user commits the code themselves — **do not git commit** unless asked.
    helper from the broader Phase 6/7 backlog.
 2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
-3. **Easy grab-bag utility follow-through:** the small ROADMAP §4 tools (Kelvin/mired converter,
-   battery/card estimator, dew-point warning, etc.) are now the easiest path for the next
+3. **Easy grab-bag utility follow-through:** the small ROADMAP §4 tools (battery/card estimator,
+   dew-point warning, Kelvin/mired shift/gel math, etc.) are now the easiest path for the next
    incremental Tools-grid addition.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
-Kelvin/mired WB converter; ft/m & °C/°F unit converter; cheat-sheet library (fireworks,
-milky way, waterfalls); battery/card-capacity estimator;
+ft/m & °C/°F unit converter; cheat-sheet library (fireworks, milky way, waterfalls);
+battery/card-capacity estimator;
 dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1 test +
 1 screen following §5.
 

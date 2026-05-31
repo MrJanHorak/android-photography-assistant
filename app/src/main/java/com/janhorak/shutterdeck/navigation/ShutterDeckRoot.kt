@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.janhorak.shutterdeck.calculators.presentation.AstroShutterScreen
+import com.janhorak.shutterdeck.calculators.presentation.ColorTemperatureScreen
 import com.janhorak.shutterdeck.calculators.presentation.DepthOfFieldScreen
 import com.janhorak.shutterdeck.calculators.presentation.DiffractionScreen
 import com.janhorak.shutterdeck.calculators.presentation.EquivalentExposureScreen
@@ -136,6 +137,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.EV_LUX) {
                 EvLuxConverterScreen()
+            }
+            composable(Routes.COLOR_TEMPERATURE) {
+                ColorTemperatureScreen()
             }
             composable(Routes.INTERVALOMETER) {
                 IntervalometerPlannerScreen()

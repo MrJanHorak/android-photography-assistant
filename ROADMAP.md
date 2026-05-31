@@ -32,7 +32,9 @@ push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now com
 `LightMeterScreen.kt` delegates shooting-aid state, workflow coaching, nearest-option matching,
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
 tests. The Exposure section now also includes **EV / Lux**: a quick ambient EV100, lux, and
-foot-candle converter backed by the same ISO 100 illuminance math used by the light meter.
+foot-candle converter backed by the same ISO 100 illuminance math used by the light meter, plus
+**Color Temperature**: a Kelvin ↔ mired white-balance converter with common WB anchors for
+daylight, tungsten, shade, and similar references.
 The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
 **Intervalometer / time-lapse planner**, **Digital Slate**, **Composition Overlays**, and
 **Live Histogram & Zebra**, **Shot Notes**, and **Lighting Setup**: dedicated tools for on-shoot use. The intervalometer screen
@@ -58,7 +60,7 @@ shareable PNG diagram export path through Android's cache + `FileProvider`.
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v17) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **169 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **174 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
@@ -386,7 +388,6 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
 
 Quick reference grab-bag to pull future tasks from:
 
-- Kelvin/mired white-balance converter.
 - Color-temperature & gel calculator (CTO/CTB correction stops).
 - Bellows-extension exposure factor; teleconverter aperture/AF impact.
 - Crop/aspect-ratio overlay & print-bleed calculator.
