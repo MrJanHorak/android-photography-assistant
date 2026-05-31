@@ -8,9 +8,14 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.janhorak.shutterdeck.navigation.Routes
+import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.SectionHeader
 import com.janhorak.shutterdeck.ui.components.ToolCard
 
@@ -87,6 +92,26 @@ fun HomeScreen(
     onToolClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val normalizedQuery = searchQuery.trim()
+    val filteredSections = if (normalizedQuery.isBlank()) {
+        toolSections
+    } else {
+        toolSections.mapNotNull { section ->
+            val sectionMatches = section.title.contains(normalizedQuery, ignoreCase = true) ||
+                section.subtitle.contains(normalizedQuery, ignoreCase = true)
+            val matchingTools = if (sectionMatches) {
+                section.tools
+            } else {
+                section.tools.filter { tool ->
+                    tool.title.contains(normalizedQuery, ignoreCase = true) ||
+                        tool.subtitle.contains(normalizedQuery, ignoreCase = true)
+                }
+            }
+            matchingTools.takeIf { it.isNotEmpty() }?.let { section.copy(tools = it) }
+        }
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 168.dp),
         contentPadding = PaddingValues(16.dp),
@@ -100,14 +125,31 @@ fun HomeScreen(
                 subtitle = "Exposure, lens and planning tools grouped for quicker scanning.",
             )
         }
-        toolSections.forEach { section ->
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            LabeledField(
+                label = "Search tools",
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier,
+                singleLine = true,
+            )
+        }
+        if (filteredSections.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionHeader(
+                    title = "No matching tools",
+                    subtitle = "Try a tool name like meter, slate, map, film, or print.",
+                )
+            }
+        }
+        filteredSections.forEach { section ->
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(
                     title = section.title,
                     subtitle = section.subtitle,
                 )
             }
-            items(section.tools, key = { it.title }) { tool ->
+            items(section.tools, key = { "${section.title}:${it.title}" }) { tool ->
                 ToolCard(
                     title = tool.title,
                     subtitle = tool.subtitle,

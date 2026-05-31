@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,17 +50,67 @@ fun ShootsScreen(
 ) {
     val shoots by viewModel.shoots.collectAsStateWithLifecycle()
     val locations by viewModel.locations.collectAsStateWithLifecycle()
-    var editing by remember { mutableStateOf<ShootEntity?>(null) }
-    var showDialog by remember { mutableStateOf(false) }
+    var editingShootId by rememberSaveable { mutableStateOf(0L) }
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    var titleDraft by rememberSaveable { mutableStateOf("") }
+    var dateDraft by rememberSaveable { mutableStateOf("") }
+    var notesDraft by rememberSaveable { mutableStateOf("") }
+    var locationIdDraft by rememberSaveable { mutableStateOf<Long?>(null) }
+    fun clearDraft() {
+        editingShootId = 0L
+        titleDraft = ""
+        dateDraft = ""
+        notesDraft = ""
+        locationIdDraft = null
+        showDialog = false
+    }
+
+    fun startNewShoot() {
+        editingShootId = 0L
+        titleDraft = ""
+        dateDraft = ""
+        notesDraft = ""
+        locationIdDraft = null
+        showDialog = true
+    }
+
+    fun startEditingShoot(shoot: ShootEntity) {
+        editingShootId = shoot.id
+        titleDraft = shoot.title
+        dateDraft = shoot.dateText
+        notesDraft = shoot.notes
+        locationIdDraft = shoot.locationId?.takeIf { selectedId ->
+            locations.any { it.id == selectedId }
+        }
+        showDialog = true
+    }
 
     if (showDialog) {
         ShootDialog(
-            initial = editing,
+            isEditing = editingShootId != 0L,
+            title = titleDraft,
+            date = dateDraft,
+            notes = notesDraft,
+            selectedLocationId = locationIdDraft?.takeIf { selectedId ->
+                locations.any { it.id == selectedId }
+            },
             locations = locations,
-            onDismiss = { showDialog = false },
-            onSave = { id, title, date, notes, locationId ->
-                viewModel.save(id, title, date, notes, locationId)
-                showDialog = false
+            onTitleChange = { titleDraft = it },
+            onDateChange = { dateDraft = it },
+            onNotesChange = { notesDraft = it },
+            onSelectedLocationIdChange = { locationIdDraft = it },
+            onDismiss = ::clearDraft,
+            onSave = {
+                viewModel.save(
+                    editingShootId,
+                    titleDraft,
+                    dateDraft,
+                    notesDraft,
+                    locationIdDraft?.takeIf { selectedId ->
+                        locations.any { it.id == selectedId }
+                    },
+                )
+                clearDraft()
             },
         )
     }
@@ -71,7 +122,7 @@ fun ShootsScreen(
     ) {
         item {
             OutlinedButton(
-                onClick = { editing = null; showDialog = true },
+                onClick = ::startNewShoot,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
@@ -91,7 +142,7 @@ fun ShootsScreen(
             ShootCard(
                 shoot = shoot,
                 onOpen = { onOpenShoot(shoot.shoot.id) },
-                onEdit = { editing = shoot.shoot; showDialog = true },
+                onEdit = { startEditingShoot(shoot.shoot) },
                 onDelete = { viewModel.delete(shoot.shoot) },
             )
         }
@@ -153,40 +204,37 @@ private fun ShootCard(
 
 @Composable
 private fun ShootDialog(
-    initial: ShootEntity?,
+    isEditing: Boolean,
+    title: String,
+    date: String,
+    notes: String,
+    selectedLocationId: Long?,
     locations: List<LocationEntity>,
+    onTitleChange: (String) -> Unit,
+    onDateChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
+    onSelectedLocationIdChange: (Long?) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (Long, String, String, String, Long?) -> Unit,
+    onSave: () -> Unit,
 ) {
-    var title by remember { mutableStateOf(initial?.title ?: "") }
-    var date by remember { mutableStateOf(initial?.dateText ?: "") }
-    var notes by remember { mutableStateOf(initial?.notes ?: "") }
-    var locationId by remember(initial?.id, locations) {
-        mutableStateOf(
-            initial?.locationId?.takeIf { selectedId ->
-                locations.any { it.id == selectedId }
-            },
-        )
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "New shoot" else "Edit shoot") },
+        title = { Text(if (isEditing) "Edit shoot" else "New shoot") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledField("Title", title, { title = it }, keyboardType = KeyboardType.Text)
-                DatePickerField("Date", date, { date = it })
+                LabeledField("Title", title, onTitleChange, keyboardType = KeyboardType.Text)
+                DatePickerField("Date", date, onDateChange)
                 LocationPickerField(
                     locations = locations,
-                    selectedLocationId = locationId,
-                    onSelectedLocationIdChange = { locationId = it },
+                    selectedLocationId = selectedLocationId,
+                    onSelectedLocationIdChange = onSelectedLocationIdChange,
                 )
-                LabeledField("Notes", notes, { notes = it }, keyboardType = KeyboardType.Text, singleLine = false)
+                LabeledField("Notes", notes, onNotesChange, keyboardType = KeyboardType.Text, singleLine = false)
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(initial?.id ?: 0L, title, date, notes, locationId) },
+                onClick = onSave,
                 enabled = title.isNotBlank(),
             ) { Text("Save") }
         },

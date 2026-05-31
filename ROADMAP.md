@@ -37,7 +37,8 @@ foot-candle converter backed by the same ISO 100 illuminance math used by the li
 daylight, tungsten, shade, and similar references, and **Unit Converter**: a quick ft ↔ m and
 °C ↔ °F reference with a sign toggle for below-zero temperature entry. The **More** tab now also
 includes lightweight getting-started/help copy, and the repo root now has a `README.md` for
-high-level orientation before the more detailed contributor docs.
+high-level orientation before the more detailed contributor docs. The **Tools** grid now also
+includes a lightweight search field that filters by section title, tool name, or description.
 The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
 **Intervalometer / time-lapse planner**, **Dew Point**, **Digital Slate**,
 **Composition Overlays**, and **Live Histogram & Zebra**, **Shot Notes**, and **Lighting Setup**:
@@ -167,6 +168,8 @@ Priority: P0 (foundation), P1 (high value, do early), P2 (valuable), P3 (later).
   now open a full-width OpenStreetMap preview plus an external map-app fallback, and
   `ShootDetailScreen.kt` now supports move-up/move-down shot reordering backed by the pure
   `planner/domain/ShotOrdering.kt` helper. This closes the planned P3/P4 planner follow-through.
+  Later UX polish tightened this further: shoot create/edit drafts now survive rotation, and the
+  linked-location card in shoot detail can reopen the same map preview dialog directly.
 
 - **Location autofill progress (2026-05-30).** Manual coordinate entry now has a **Use current
   location** path in `LocationsScreen.kt`, `SunTimesScreen.kt`, and `SunMoonPositionScreen.kt`.

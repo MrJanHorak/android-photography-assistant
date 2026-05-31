@@ -54,6 +54,7 @@ fun ShootDetailScreen(
     val headerState by viewModel.headerState.collectAsStateWithLifecycle()
     val shots by viewModel.shots.collectAsStateWithLifecycle()
     var showShotDialog by rememberSaveable { mutableStateOf(false) }
+    var showLocationMap by rememberSaveable { mutableStateOf(false) }
     var editingShotId by rememberSaveable { mutableStateOf(0L) }
     var shotDescriptionDraft by rememberSaveable { mutableStateOf("") }
     var shotGearDraft by rememberSaveable { mutableStateOf("") }
@@ -116,6 +117,15 @@ fun ShootDetailScreen(
         )
     }
 
+    val linkedLocation = headerState.location
+
+    if (showLocationMap && linkedLocation != null) {
+        LocationMapDialog(
+            location = linkedLocation,
+            onDismiss = { showLocationMap = false },
+        )
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -136,8 +146,13 @@ fun ShootDetailScreen(
         if (headerState.location != null || headerState.locationMissing) {
             item {
                 LinkedLocationCard(
-                    location = headerState.location,
+                    location = linkedLocation,
                     locationMissing = headerState.locationMissing,
+                    onPreviewMap = if (linkedLocation?.latitude != null && linkedLocation.longitude != null) {
+                        { showLocationMap = true }
+                    } else {
+                        null
+                    },
                 )
             }
         }
@@ -186,6 +201,7 @@ fun ShootDetailScreen(
 private fun LinkedLocationCard(
     location: LocationEntity?,
     locationMissing: Boolean,
+    onPreviewMap: (() -> Unit)?,
 ) {
     androidx.compose.material3.Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -212,6 +228,14 @@ private fun LinkedLocationCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    onPreviewMap?.let { previewMap ->
+                        OutlinedButton(
+                            onClick = previewMap,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Preview map")
+                        }
+                    }
                 }
                 if (location.bestTime.isNotBlank()) {
                     Text(

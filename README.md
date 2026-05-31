@@ -21,10 +21,15 @@ tools grouped into:
 - **On-Shoot Utilities** such as Spirit Level, Gray Card, Intervalometer, Dew Point, Digital Slate,
   Shot Notes, Lighting Setup, Composition Overlays, and Live Histogram & Zebra.
 
+The Tools screen also includes a lightweight search field so the grid can be filtered by tool name
+or description.
+
 ### Planner tab
 
 The **Planner** tab covers scouting locations and saved shoots, including shot checklists, linked
-locations, current-location autofill, map preview, and astronomy helpers for planning.
+locations, current-location autofill, map preview, and astronomy helpers for planning. Shoot
+create/edit drafts now survive rotation, and linked locations can reopen the same in-app map
+preview directly from shoot detail.
 
 ### Gear tab
 

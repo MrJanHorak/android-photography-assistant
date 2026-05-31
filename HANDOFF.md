@@ -14,7 +14,7 @@ Package root: `com.janhorak.shutterdeck`
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
-**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme + lightweight help).
+**Tools** (sectioned home grid + search), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme + lightweight help).
 
 **26 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
@@ -105,11 +105,21 @@ technical docs.
 temperature, relative humidity, and current lens/gear temperature, then reports dew point, the
 surface-vs-dew-point margin, and a low / warning / active condensation risk.
 
+**Tool discovery polish** landed too. `home/HomeScreen.kt` now includes a lightweight search field
+that filters the 26-tool grid by section title, tool name, or description, with a simple empty
+state when nothing matches.
+
 **Planner polish** has also started. Shoots can now optionally link to saved scouting locations:
 `ShootEntity` gained `locationId`, `ShootsScreen.kt` now supports editing shoots and choosing or
 clearing a saved location, the shoot list shows linked-location labels, and
 `ShootDetailScreen.kt` shows the linked location context (name, coordinates, best time, notes) or
 a graceful missing-location state if the saved location was removed later.
+
+**Planner UX polish** landed too. `ShootsScreen.kt` now keeps shoot create/edit drafts in
+saveable parent state so title/date/location/notes survive rotation while the dialog is open, and
+`ShootDetailScreen.kt` now reuses the existing `LocationMapDialog` from the linked-location card so
+saved scouting coordinates are reachable directly from shoot detail instead of only from the
+locations list.
 
 Saved-location and astronomy coordinate entry now also support **Use current location** alongside
 manual entry. `LocationsScreen.kt`, `SunTimesScreen.kt`, and `SunMoonPositionScreen.kt` all share
