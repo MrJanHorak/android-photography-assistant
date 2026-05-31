@@ -9,7 +9,7 @@ import kotlin.math.pow
  */
 
 /** EV at ISO 100 from an ambient lux reading: EV = log2(lux / 2.5). */
-fun evFromLux(lux: Float): Float = log2(lux / 2.5f)
+fun evFromLux(lux: Float): Float = log2(lux / EV100_ZERO_LUX.toFloat())
 
 /** EV100 for a reflective reading from aperture, shutter (seconds) and ISO, or null if inputs are invalid. */
 fun reflectiveEv100(aperture: Float, shutterSeconds: Double, iso: Int): Float? {

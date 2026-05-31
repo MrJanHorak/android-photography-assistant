@@ -34,6 +34,7 @@ private val toolSections = listOf(
         subtitle = "Metering, flash, daylight rules and shutter-speed tradeoffs.",
         tools = listOf(
             ToolEntry("Light Meter", "Ambient & reflective metering", Routes.LIGHT_METER),
+            ToolEntry("EV / Lux", "Ambient EV100, lux & foot-candles", Routes.EV_LUX),
             ToolEntry("ND Filter", "Long-exposure calculator", Routes.ND_FILTER),
             ToolEntry("Sunny 16", "Daylight exposure & reciprocity", Routes.SUNNY_16),
             ToolEntry("Equivalent Exposure", "Trade aperture, shutter & ISO", Routes.EQUIVALENT_EXPOSURE),

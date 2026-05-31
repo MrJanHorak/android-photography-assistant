@@ -17,6 +17,7 @@ object Routes {
     const val MORE = "more"
 
     const val LIGHT_METER = "lightmeter"
+    const val EV_LUX = "evlux"
     const val DEPTH_OF_FIELD = "depthoffield"
     const val ND_FILTER = "ndfilter"
     const val FIELD_OF_VIEW = "fieldofview"
@@ -79,6 +80,7 @@ fun titleForRoute(route: String?): String = when {
         Routes.FILM -> "Film"
         Routes.MORE -> "More"
         Routes.LIGHT_METER -> "Light Meter"
+        Routes.EV_LUX -> "EV / Lux"
         Routes.DEPTH_OF_FIELD -> "Depth of Field"
         Routes.ND_FILTER -> "ND Filter"
         Routes.FIELD_OF_VIEW -> "Field of View"

@@ -25,6 +25,7 @@ import com.janhorak.shutterdeck.calculators.presentation.AstroShutterScreen
 import com.janhorak.shutterdeck.calculators.presentation.DepthOfFieldScreen
 import com.janhorak.shutterdeck.calculators.presentation.DiffractionScreen
 import com.janhorak.shutterdeck.calculators.presentation.EquivalentExposureScreen
+import com.janhorak.shutterdeck.calculators.presentation.EvLuxConverterScreen
 import com.janhorak.shutterdeck.calculators.presentation.FieldOfViewScreen
 import com.janhorak.shutterdeck.calculators.presentation.FocusStackingScreen
 import com.janhorak.shutterdeck.calculators.presentation.GuideNumberScreen
@@ -132,6 +133,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.LIGHT_METER) {
                 LightMeterScreen()
+            }
+            composable(Routes.EV_LUX) {
+                EvLuxConverterScreen()
             }
             composable(Routes.INTERVALOMETER) {
                 IntervalometerPlannerScreen()
