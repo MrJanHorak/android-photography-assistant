@@ -19,7 +19,7 @@ import com.janhorak.shutterdeck.ui.components.LabeledField
 import com.janhorak.shutterdeck.ui.components.SectionHeader
 import com.janhorak.shutterdeck.ui.components.ToolCard
 
-private data class ToolEntry(
+internal data class ToolEntry(
     val title: String,
     val subtitle: String,
     val route: String?,
@@ -27,13 +27,13 @@ private data class ToolEntry(
     val enabled: Boolean get() = route != null
 }
 
-private data class ToolSection(
+internal data class ToolSection(
     val title: String,
     val subtitle: String,
     val tools: List<ToolEntry>,
 )
 
-private val toolSections = listOf(
+internal val toolSections = listOf(
     ToolSection(
         title = "Exposure",
         subtitle = "Metering, flash, daylight rules and shutter-speed tradeoffs.",
@@ -86,31 +86,53 @@ private val toolSections = listOf(
     ),
 )
 
+internal fun filterToolSections(
+    query: String,
+    sections: List<ToolSection> = toolSections,
+): List<ToolSection> {
+    val normalizedQuery = query.trim()
+    if (normalizedQuery.isBlank()) return sections
+
+    return sections.mapNotNull { section ->
+        val sectionMatches = section.title.contains(normalizedQuery, ignoreCase = true) ||
+            section.subtitle.contains(normalizedQuery, ignoreCase = true)
+        val matchingTools = if (sectionMatches) {
+            section.tools
+        } else {
+            section.tools.filter { tool ->
+                tool.title.contains(normalizedQuery, ignoreCase = true) ||
+                    tool.subtitle.contains(normalizedQuery, ignoreCase = true)
+            }
+        }
+        matchingTools.takeIf { it.isNotEmpty() }?.let { section.copy(tools = it) }
+    }
+}
+
+internal fun favoriteTools(
+    sections: List<ToolSection>,
+    favoriteRoutes: Set<String>,
+): List<ToolEntry> = sections
+    .asSequence()
+    .flatMap { section -> section.tools.asSequence() }
+    .filter { tool -> tool.route != null && tool.route in favoriteRoutes }
+    .distinctBy { tool -> tool.route }
+    .sortedBy { tool -> tool.title.lowercase() }
+    .toList()
+
 /** Home hub: a grid of available tools. */
 @Composable
 fun HomeScreen(
     onToolClick: (String) -> Unit,
+    favorites: Set<String>,
+    onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    val normalizedQuery = searchQuery.trim()
-    val filteredSections = if (normalizedQuery.isBlank()) {
-        toolSections
-    } else {
-        toolSections.mapNotNull { section ->
-            val sectionMatches = section.title.contains(normalizedQuery, ignoreCase = true) ||
-                section.subtitle.contains(normalizedQuery, ignoreCase = true)
-            val matchingTools = if (sectionMatches) {
-                section.tools
-            } else {
-                section.tools.filter { tool ->
-                    tool.title.contains(normalizedQuery, ignoreCase = true) ||
-                        tool.subtitle.contains(normalizedQuery, ignoreCase = true)
-                }
-            }
-            matchingTools.takeIf { it.isNotEmpty() }?.let { section.copy(tools = it) }
-        }
-    }
+    val filteredSections = filterToolSections(query = searchQuery)
+    val favoriteEntries = favoriteTools(
+        sections = filteredSections,
+        favoriteRoutes = favorites,
+    )
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 168.dp),
@@ -122,7 +144,7 @@ fun HomeScreen(
         item(span = { GridItemSpan(maxLineSpan) }) {
             SectionHeader(
                 title = "Tools",
-                subtitle = "Exposure, lens and planning tools grouped for quicker scanning.",
+                subtitle = "Search the catalog or star your regulars to keep them pinned at the top.",
             )
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -133,6 +155,30 @@ fun HomeScreen(
                 modifier = Modifier,
                 singleLine = true,
             )
+        }
+        if (favoriteEntries.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionHeader(
+                    title = "Favorites",
+                    subtitle = "Your starred tools stay pinned here for faster repeat access.",
+                )
+            }
+            items(
+                items = favoriteEntries,
+                key = { tool -> "fav:${tool.route}" },
+            ) { tool ->
+                val route = tool.route
+                ToolCard(
+                    title = tool.title,
+                    subtitle = tool.subtitle,
+                    enabled = tool.enabled,
+                    isFavorite = true,
+                    onToggleFavorite = route?.let { favoriteRoute ->
+                        { onToggleFavorite(favoriteRoute) }
+                    },
+                    onClick = { route?.let(onToolClick) },
+                )
+            }
         }
         if (filteredSections.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -154,6 +200,10 @@ fun HomeScreen(
                     title = tool.title,
                     subtitle = tool.subtitle,
                     enabled = tool.enabled,
+                    isFavorite = tool.route != null && tool.route in favorites,
+                    onToggleFavorite = tool.route?.let { favoriteRoute ->
+                        { onToggleFavorite(favoriteRoute) }
+                    },
                     onClick = { tool.route?.let(onToolClick) },
                 )
             }

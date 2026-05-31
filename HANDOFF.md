@@ -14,7 +14,7 @@ Package root: `com.janhorak.shutterdeck`
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
-**Tools** (sectioned home grid + search), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme + lightweight help).
+**Tools** (sectioned home grid + search + favorites), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme + lightweight help).
 
 **26 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
@@ -107,7 +107,9 @@ surface-vs-dew-point margin, and a low / warning / active condensation risk.
 
 **Tool discovery polish** landed too. `home/HomeScreen.kt` now includes a lightweight search field
 that filters the 26-tool grid by section title, tool name, or description, with a simple empty
-state when nothing matches.
+state when nothing matches. A follow-up polish pass now also lets users star favorite tools, keeps
+those routes in DataStore, and pins a **Favorites** section to the top of the grid for quicker
+repeat access.
 
 **Planner polish** has also started. Shoots can now optionally link to saved scouting locations:
 `ShootEntity` gained `locationId`, `ShootsScreen.kt` now supports editing shoots and choosing or
@@ -241,7 +243,8 @@ new picks are normalized to ISO `YYYY-MM-DD`, `HH:mm`, or `YYYY-MM-DD HH:mm` as 
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v17) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v17) + DataStore (Preferences) for theme/settings and
+favorite tool routes.
 `AppDatabase.MIGRATION_14_15` preserves the location `referencePhotoUri` column and
 `AppDatabase.MIGRATION_15_16` adds the `shot_notes` table, while
 `AppDatabase.MIGRATION_16_17` adds `lighting_setups` plus `lighting_setup_items` on upgrade, but
@@ -372,7 +375,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 185 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 188 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 

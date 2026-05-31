@@ -14,6 +14,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -47,6 +49,7 @@ import com.janhorak.shutterdeck.film.presentation.FilmRollsScreen
 import com.janhorak.shutterdeck.film.presentation.FilmStocksScreen
 import com.janhorak.shutterdeck.gear.presentation.GearInventoryScreen
 import com.janhorak.shutterdeck.home.HomeScreen
+import com.janhorak.shutterdeck.home.HomeViewModel
 import com.janhorak.shutterdeck.metering.presentation.LightMeterScreen
 import com.janhorak.shutterdeck.planner.presentation.LocationsScreen
 import com.janhorak.shutterdeck.planner.presentation.PlannerScreen
@@ -132,7 +135,13 @@ fun ShutterDeckRoot() {
             modifier = if (hideChrome) Modifier else Modifier.padding(innerPadding),
         ) {
             composable(Routes.TOOLS) {
-                HomeScreen(onToolClick = { route -> navController.navigate(route) })
+                val homeViewModel: HomeViewModel = hiltViewModel()
+                val favoriteRoutes by homeViewModel.favoriteRoutes.collectAsStateWithLifecycle()
+                HomeScreen(
+                    onToolClick = { route -> navController.navigate(route) },
+                    favorites = favoriteRoutes,
+                    onToggleFavorite = homeViewModel::toggleFavorite,
+                )
             }
             composable(Routes.LIGHT_METER) {
                 LightMeterScreen()
