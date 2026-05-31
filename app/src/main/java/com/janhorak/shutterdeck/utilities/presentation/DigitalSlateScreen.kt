@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -61,6 +63,31 @@ import kotlin.math.ceil
 import kotlinx.coroutines.delay
 
 private const val SLATE_FLASH_DURATION_MILLIS = 260L
+private const val DEFAULT_SLATE_MARK_HOLD_MILLIS = 2_000L
+
+private data class SlateMarkHoldOption(
+    val durationMillis: Long,
+    val label: String,
+)
+
+private val slateMarkHoldOptions = listOf(
+    SlateMarkHoldOption(
+        durationMillis = SLATE_FLASH_DURATION_MILLIS,
+        label = "Flash",
+    ),
+    SlateMarkHoldOption(
+        durationMillis = 1_000L,
+        label = "1 s",
+    ),
+    SlateMarkHoldOption(
+        durationMillis = DEFAULT_SLATE_MARK_HOLD_MILLIS,
+        label = "2 s",
+    ),
+    SlateMarkHoldOption(
+        durationMillis = 3_000L,
+        label = "3 s",
+    ),
+)
 
 private data class SlateMarkSnapshot(
     val productionTitle: String,
@@ -96,6 +123,7 @@ fun DigitalSlateScreen(
     var lastMarkedLabel by rememberSaveable { mutableStateOf("") }
     var lastMarkedAtText by rememberSaveable { mutableStateOf("") }
     var markSnapshot by remember { mutableStateOf<SlateMarkSnapshot?>(null) }
+    var markHoldDurationMillis by rememberSaveable { mutableStateOf(DEFAULT_SLATE_MARK_HOLD_MILLIS) }
 
     val takeValue = takeText.toIntOrNull()?.takeIf { it > 0 }
     val takeValidationMessage = when {
@@ -104,9 +132,9 @@ fun DigitalSlateScreen(
         else -> null
     }
 
-    LaunchedEffect(markSnapshot) {
+    LaunchedEffect(markSnapshot, markHoldDurationMillis) {
         val snapshot = markSnapshot ?: return@LaunchedEffect
-        delay(SLATE_FLASH_DURATION_MILLIS)
+        delay(markHoldDurationMillis)
         lastMarkedLabel = buildLastMarkedLabel(
             scene = snapshot.scene,
             shot = snapshot.shot,
@@ -145,6 +173,7 @@ fun DigitalSlateScreen(
                         markSnapshot = markSnapshot,
                         lastMarkedLabel = lastMarkedLabel,
                         lastMarkedAtText = lastMarkedAtText,
+                        markHoldDurationMillis = markHoldDurationMillis,
                     ),
                     modifier = Modifier.weight(1f),
                 )
@@ -165,6 +194,7 @@ fun DigitalSlateScreen(
                 notes = notesText,
                 dateText = slateDateText,
                 lastMarkedAtText = lastMarkedAtText,
+                markHoldDurationMillis = markHoldDurationMillis,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -244,6 +274,8 @@ fun DigitalSlateScreen(
                     onCameraChange = { cameraText = it },
                     notesText = notesText,
                     onNotesChange = { notesText = it },
+                    markHoldDurationMillis = markHoldDurationMillis,
+                    onMarkHoldDurationChange = { markHoldDurationMillis = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -292,6 +324,7 @@ private fun SlateBoard(
     notes: String,
     dateText: String,
     lastMarkedAtText: String,
+    markHoldDurationMillis: Long,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(28.dp)
@@ -404,7 +437,7 @@ private fun SlateBoard(
             ) {
                 Text(
                     text = if (lastMarkedAtText.isBlank()) {
-                        "Ready to mark. Mark auto-advances to the next take."
+                        "Ready to mark. Mark auto-advances after the ${resolveSlateMarkHoldLabel(markHoldDurationMillis)} hold."
                     } else {
                         "Last mark: $lastMarkedAtText"
                     },
@@ -525,6 +558,8 @@ private fun SlateDetailsCard(
     onCameraChange: (String) -> Unit,
     notesText: String,
     onNotesChange: (String) -> Unit,
+    markHoldDurationMillis: Long,
+    onMarkHoldDurationChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -548,6 +583,29 @@ private fun SlateDetailsCard(
             Text(
                 text = "Keep Mark visible for the camera, and hide this panel once the slate is framed. Mark uses the visible scene / shot / take and then advances to the next take.",
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "Mark hold",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                slateMarkHoldOptions.forEach { option ->
+                    FilterChip(
+                        selected = option.durationMillis == markHoldDurationMillis,
+                        onClick = { onMarkHoldDurationChange(option.durationMillis) },
+                        label = { Text(option.label) },
+                    )
+                }
+            }
+            Text(
+                text = "A 2 s timed hold is a good default for a readable slate. Flash keeps the old quick blink behavior.",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             LabeledField(
@@ -684,12 +742,20 @@ private fun buildStatusText(
     markSnapshot: SlateMarkSnapshot?,
     lastMarkedLabel: String,
     lastMarkedAtText: String,
+    markHoldDurationMillis: Long,
 ): String = when {
-    markSnapshot != null -> "Marking ${buildLastMarkedLabel(markSnapshot.scene, markSnapshot.shot, markSnapshot.take)}"
+    markSnapshot != null && markHoldDurationMillis <= SLATE_FLASH_DURATION_MILLIS ->
+        "Marking ${buildLastMarkedLabel(markSnapshot.scene, markSnapshot.shot, markSnapshot.take)}"
+    markSnapshot != null ->
+        "Holding ${buildLastMarkedLabel(markSnapshot.scene, markSnapshot.shot, markSnapshot.take)} for ${resolveSlateMarkHoldLabel(markHoldDurationMillis)}"
     lastMarkedLabel.isNotBlank() && lastMarkedAtText.isNotBlank() -> "Last mark: $lastMarkedLabel at $lastMarkedAtText"
     currentTake != null -> "Ready for take $currentTake"
     else -> "Ready to mark"
 }
+
+private fun resolveSlateMarkHoldLabel(durationMillis: Long): String =
+    slateMarkHoldOptions.firstOrNull { option -> option.durationMillis == durationMillis }?.label
+        ?: "${durationMillis / 1000f} s"
 
 private fun buildLastMarkedLabel(
     scene: String,

@@ -144,7 +144,8 @@ The same section now also includes **Digital Slate / Clapperboard** for video an
 chrome, keep-awake/max-brightness behavior, a landscape lock, tap-to-hide metadata controls, and a
 large scene/shot/take board. The `Mark` action triggers a high-contrast full-screen sync flash,
 captures a timestamp, and auto-advances to the next take while keeping manual take +/- controls
-available for quick correction.
+available for quick correction. The slate now defaults to a **2-second timed mark hold** for better
+readability, while still exposing `Flash`, `1 s`, `2 s`, and `3 s` presets in the details panel.
 
 That same utility section now also includes **Shot Notes**. `ShotNotesScreen.kt` and
 `ShotNotesViewModel.kt` add local-only, Room-backed quick notes with typed entry, optional speech
@@ -391,11 +392,11 @@ The user commits the code themselves — **do not git commit** unless asked.
 1. **Phase 6/7 backlog selection:** the named Phase 7 utility slices in `ROADMAP.md` are now
    complete, so the next contributor should pick the next smaller remaining business or on-shoot
    helper from the broader Phase 6/7 backlog.
-2. **Digital slate polish:** the current `Mark` overlay is still a fast 260 ms flash; if more
-   field testing says that is too brief, add a configurable hold duration around the existing mark
-   behavior rather than changing the slate board itself.
-3. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
+2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
+3. **Easy grab-bag utility follow-through:** the small ROADMAP §4 tools (Kelvin/mired converter,
+   EV↔lux converter, battery/card estimator, dew-point warning, etc.) are now the easiest path for
+   the next incremental Tools-grid addition.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
 EV↔lux↔foot-candle converter; Kelvin/mired WB converter; ft/m & °C/°F unit converter;

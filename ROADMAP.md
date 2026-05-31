@@ -38,7 +38,9 @@ intentionally starts as a planner: it calculates first-frame-to-last-frame captu
 length, storage/card coverage, battery coverage, and exposure-vs-interval headroom from pure
 `utilities/domain/IntervalometerPlanner.kt` helpers covered by JVM tests. The digital slate route
 now adds an immersive landscape board with editable production metadata, tap-to-hide controls, and
-a high-contrast sync flash mark that auto-advances the take counter for video/hybrid capture. The
+a high-contrast sync flash mark with configurable `Flash` / `1 s` / `2 s` / `3 s` hold presets,
+defaulting to a readable 2-second timed display before the take auto-advances for video/hybrid
+capture. The
 shared CameraX preview path now supports both overlay-only preview and a throttled luminance
 analysis pass, so the app can draw rule-of-thirds / golden-ratio / corner-to-corner diagonal
 guides or show a live luminance histogram plus coarse clipped-highlight zebra cells over the same
@@ -355,7 +357,9 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
 - **[U6] Digital slate / clapperboard. ✅** For video/hybrid shooters. *Update:* the Tools grid now
   links to a dedicated immersive route that locks landscape, keeps the screen awake, hides app
   chrome, shows a large scene/shot/take slate with editable metadata, and provides a
-  high-contrast `Mark` flash that timestamps the take and auto-advances to the next take.
+  high-contrast `Mark` overlay that timestamps the take, offers `Flash` / `1 s` / `2 s` / `3 s`
+  hold presets, defaults to a readable 2-second timed display, and then auto-advances to the next
+  take.
 - **[U7] Voice/quick notes per shot. ✅** Fast field notes tied to time/location.
   *Update:* the Tools grid now links to a local-only Room-backed note screen with quick typed entry,
   optional `RecognizerIntent` dictation, automatic timestamps, optional current-location snapshots,
