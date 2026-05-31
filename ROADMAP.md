@@ -22,7 +22,7 @@ later phases depend on the Phase 0 foundation.
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅,
 Phase 4 Gear G1–G7 ✅, Phase 5 **FL1–FL5 film suite** ✅, and Phase 7 **U1 Spirit level** +
 **U2 Intervalometer / time-lapse planner** + **U3 Gray-card / white-balance screen** +
-**U4 Live histogram & zebra** + **U5 Composition overlays** ✅.
+**U4 Live histogram & zebra** + **U5 Composition overlays** + **U6 Digital slate / clapperboard** ✅.
 The **Tools** grid is now sectioned for scanability, the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
 battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export,
@@ -31,15 +31,17 @@ push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now com
 `LightMeterScreen.kt` delegates shooting-aid state, workflow coaching, nearest-option matching,
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
 tests. The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
-**Intervalometer / time-lapse planner**, **Composition Overlays**, and **Live Histogram & Zebra**:
-dedicated tools for on-shoot use. The intervalometer screen intentionally starts as a planner: it
-calculates first-frame-to-last-frame capture windows, clip length, storage/card coverage, battery
-coverage, and exposure-vs-interval headroom from pure `utilities/domain/IntervalometerPlanner.kt`
-helpers covered by JVM tests. The shared CameraX preview path now supports both overlay-only
-preview and a throttled luminance analysis pass, so the app can draw rule-of-thirds / golden-ratio
-/ corner-to-corner diagonal guides or show a live luminance histogram plus coarse
-clipped-highlight zebra cells over the same preview foundation. Structured date/time entry is now
-picker-backed across the confirmed
+**Intervalometer / time-lapse planner**, **Digital Slate**, **Composition Overlays**, and
+**Live Histogram & Zebra**: dedicated tools for on-shoot use. The intervalometer screen
+intentionally starts as a planner: it calculates first-frame-to-last-frame capture windows, clip
+length, storage/card coverage, battery coverage, and exposure-vs-interval headroom from pure
+`utilities/domain/IntervalometerPlanner.kt` helpers covered by JVM tests. The digital slate route
+now adds an immersive landscape board with editable production metadata, tap-to-hide controls, and
+a high-contrast sync flash mark that auto-advances the take counter for video/hybrid capture. The
+shared CameraX preview path now supports both overlay-only preview and a throttled luminance
+analysis pass, so the app can draw rule-of-thirds / golden-ratio / corner-to-corner diagonal
+guides or show a live luminance histogram plus coarse clipped-highlight zebra cells over the same
+preview foundation. Structured date/time entry is now picker-backed across the confirmed
 hard-formatted surfaces too: planner shoot dates, gear purchase/maintenance/loan/support dates,
 film roll/frame timestamps, and the astronomy date/time inputs now share reusable picker
 components plus shared ISO/date-time formatting helpers, while freeform notes such as scouting
@@ -54,7 +56,7 @@ components plus shared ISO/date-time formatting helpers, while freeform notes su
 
 ### Remaining gaps / next focus
 1. **Phase 7 shared-camera follow-through is complete.** The next clean utility slice is
-   **[U6] digital slate / clapperboard**, followed by the remaining on-shoot backlog.
+   **[U7] voice / quick notes per shot**, followed by the remaining on-shoot backlog.
 2. **Phase 6/7 utility backlog** is still open: business and on-shoot helpers remain the next
    broad expansion area now that planner, gear, film, calculator, and shared camera foundations are
    stable.
@@ -345,7 +347,10 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   reuses the shared back-camera preview path, keeps the screen awake, hides app chrome, and lets
   photographers swap between rule-of-thirds, golden-ratio, and corner-to-corner diagonal guides
   drawn over the live CameraX preview.
-- **[U6] Digital slate / clapperboard.** For video/hybrid shooters.
+- **[U6] Digital slate / clapperboard. ✅** For video/hybrid shooters. *Update:* the Tools grid now
+  links to a dedicated immersive route that locks landscape, keeps the screen awake, hides app
+  chrome, shows a large scene/shot/take slate with editable metadata, and provides a
+  high-contrast `Mark` flash that timestamps the take and auto-advances to the next take.
 - **[U7] Voice/quick notes per shot.** Fast field notes tied to time/location.
 - **[U8] Lighting-setup diagrammer.** Place lights/subject/camera; save/share diagrams.
 
@@ -392,7 +397,7 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 7 / U6** — digital slate / clapperboard as the next smaller on-shoot utility
+5. **NEXT → Phase 7 / U7** — voice / quick notes per shot as the next smaller on-shoot utility
    slice.
 6. **Phase 6/7** — business + remaining on-shoot utilities as the app matures.
 7. **Phase 8** — formalize the KMP `shared` module once feature breadth stabilizes.

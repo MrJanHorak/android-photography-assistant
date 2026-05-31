@@ -16,15 +16,15 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**19 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**20 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
 10. Equivalent Exposure · 11. Macro / Extension · 12. Diffraction Limit ·
 13. Golden Hour (sun times) · 14. Sun & Moon position + moon phase ·
 15. Spirit Level / horizon · 16. Intervalometer / time-lapse planner ·
-17. Gray Card / white-balance reference · 18. Composition Overlays / framing guides ·
-19. Live Histogram & Zebra.
+17. Digital Slate / clapperboard · 18. Gray Card / white-balance reference ·
+19. Composition Overlays / framing guides · 20. Live Histogram & Zebra.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -137,6 +137,13 @@ calculates the first-frame-to-last-frame capture window, clip length at the chos
 storage/card coverage, battery coverage, and exposure-vs-interval headroom from pure
 `utilities/domain/IntervalometerPlanner.kt` helpers covered by JVM tests. It intentionally stops at
 planning math for now; camera triggering still belongs to future hardware-backed work.
+
+The same section now also includes **Digital Slate / Clapperboard** for video and hybrid shooters.
+`utilities/presentation/DigitalSlateScreen.kt` adds an immersive full-screen route with hidden app
+chrome, keep-awake/max-brightness behavior, a landscape lock, tap-to-hide metadata controls, and a
+large scene/shot/take board. The `Mark` action triggers a high-contrast full-screen sync flash,
+captures a timestamp, and auto-advances to the next take while keeping manual take +/- controls
+available for quick correction.
 
 Structured date/time entry now also uses shared picker-backed controls wherever the app expects a
 real formatted date or time. `planner/presentation/ShootsScreen.kt`, the Gear purchase /
@@ -360,8 +367,8 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 7 / U6:** digital slate / clapperboard is now the next smaller on-shoot utility slice
-   after the intervalometer/time-lapse planner landed.
+1. **Phase 7 / U7:** voice / quick notes per shot is now the next smaller on-shoot utility slice
+   after the digital slate / clapperboard landed.
 2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
 3. **Phase 6/7 backlog** — business and the remaining on-shoot utilities remain the next broad

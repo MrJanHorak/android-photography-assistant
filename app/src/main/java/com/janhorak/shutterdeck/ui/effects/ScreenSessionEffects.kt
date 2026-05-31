@@ -39,6 +39,23 @@ fun LockPortraitOrientation() {
     }
 }
 
+@Composable
+fun LockLandscapeOrientation() {
+    val activity = LocalContext.current.findActivity()
+
+    DisposableEffect(activity) {
+        if (activity == null) {
+            onDispose { }
+        } else {
+            val previousOrientation = activity.requestedOrientation
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            onDispose {
+                activity.requestedOrientation = previousOrientation
+            }
+        }
+    }
+}
+
 internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
