@@ -119,7 +119,10 @@ a graceful missing-location state if the saved location was removed later.
 saveable parent state so title/date/location/notes survive rotation while the dialog is open, and
 `ShootDetailScreen.kt` now reuses the existing `LocationMapDialog` from the linked-location card so
 saved scouting coordinates are reachable directly from shoot detail instead of only from the
-locations list.
+locations list. The planner create/edit flows are now also less cramped: `ShootsScreen.kt` and
+`LocationsScreen.kt` both use a shared `planner/presentation/PlannerEditorSheet.kt` bottom-sheet
+wrapper instead of large `AlertDialog` forms, and the shoot editor's saved-location picker now uses
+an anchored dropdown field inside the sheet.
 
 Saved-location and astronomy coordinate entry now also support **Use current location** alongside
 manual entry. `LocationsScreen.kt`, `SunTimesScreen.kt`, and `SunMoonPositionScreen.kt` all share

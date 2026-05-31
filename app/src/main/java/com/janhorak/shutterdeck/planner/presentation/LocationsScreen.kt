@@ -2,8 +2,6 @@ package com.janhorak.shutterdeck.planner.presentation
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -109,7 +106,7 @@ fun LocationsScreen(
     }
 
     if (showEditor && (editingLocationId == 0L || editing != null)) {
-        LocationDialog(
+        LocationEditorSheet(
             state = LocationEditorState(
                 id = editingLocationId,
                 name = nameDraft,
@@ -243,7 +240,7 @@ private fun LocationCard(
 }
 
 @Composable
-private fun LocationDialog(
+private fun LocationEditorSheet(
     state: LocationEditorState,
     currentLocationState: CurrentLocationRequestState,
     statusMessage: String?,
@@ -257,16 +254,21 @@ private fun LocationDialog(
     onClearReferencePhoto: () -> Unit,
     onSave: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (state.id == 0L) "Add location" else "Edit location") },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-            ) {
+    PlannerEditorSheet(
+        title = if (state.id == 0L) "Add location" else "Edit location",
+        onDismiss = onDismiss,
+        onSave = onSave,
+        saveEnabled = state.name.isNotBlank(),
+        supportingText = statusMessage,
+        supportingTextColor = MaterialTheme.colorScheme.error,
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LabeledField("Name", state.name, onNameChange, keyboardType = KeyboardType.Text)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     LabeledField("Latitude", state.latitude, onLatitudeChange, modifier = Modifier.weight(1f), suffix = "°")
                     LabeledField("Longitude", state.longitude, onLongitudeChange, modifier = Modifier.weight(1f), suffix = "°")
                 }
@@ -285,7 +287,10 @@ private fun LocationDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     OutlinedButton(
                         onClick = onPickReferencePhoto,
                         modifier = Modifier.weight(1f),
@@ -303,21 +308,7 @@ private fun LocationDialog(
                 }
                 LabeledField("Best time", state.bestTime, onBestTimeChange, keyboardType = KeyboardType.Text)
                 LabeledField("Notes", state.notes, onNotesChange, keyboardType = KeyboardType.Text, singleLine = false)
-                statusMessage?.let { message ->
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onSave,
-                enabled = state.name.isNotBlank(),
-            ) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+        }
+    }
 }

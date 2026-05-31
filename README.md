@@ -29,7 +29,8 @@ or description.
 The **Planner** tab covers scouting locations and saved shoots, including shot checklists, linked
 locations, current-location autofill, map preview, and astronomy helpers for planning. Shoot
 create/edit drafts now survive rotation, and linked locations can reopen the same in-app map
-preview directly from shoot detail.
+preview directly from shoot detail. The shoot and location editors now use roomier bottom sheets
+instead of cramped dialog forms.
 
 ### Gear tab
 

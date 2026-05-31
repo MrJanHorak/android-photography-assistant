@@ -1,12 +1,12 @@
 package com.janhorak.shutterdeck.planner.presentation
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,17 +14,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,7 +88,7 @@ fun ShootsScreen(
     }
 
     if (showDialog) {
-        ShootDialog(
+        ShootEditorSheet(
             isEditing = editingShootId != 0L,
             title = titleDraft,
             date = dateDraft,
@@ -203,7 +205,7 @@ private fun ShootCard(
 }
 
 @Composable
-private fun ShootDialog(
+private fun ShootEditorSheet(
     isEditing: Boolean,
     title: String,
     date: String,
@@ -217,11 +219,14 @@ private fun ShootDialog(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (isEditing) "Edit shoot" else "New shoot") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    PlannerEditorSheet(
+        title = if (isEditing) "Edit shoot" else "New shoot",
+        onDismiss = onDismiss,
+        onSave = onSave,
+        saveEnabled = title.isNotBlank(),
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LabeledField("Title", title, onTitleChange, keyboardType = KeyboardType.Text)
                 DatePickerField("Date", date, onDateChange)
                 LocationPickerField(
@@ -231,17 +236,11 @@ private fun ShootDialog(
                 )
                 LabeledField("Notes", notes, onNotesChange, keyboardType = KeyboardType.Text, singleLine = false)
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onSave,
-                enabled = title.isNotBlank(),
-            ) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LocationPickerField(
     locations: List<LocationEntity>,
@@ -254,54 +253,50 @@ private fun LocationPickerField(
         locations.firstOrNull { it.id == selectedLocationId }?.name ?: "No location"
     }
 
-    Column(
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (locations.isNotEmpty()) expanded = !expanded },
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = "Location",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        OutlinedTextField(
+            value = selectedLocationName,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Location") },
+            supportingText = {
+                if (locations.isEmpty()) {
+                    Text("Save a scouting location first if you want to link one.")
+                }
+            },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = selectedLocationName,
-                    modifier = Modifier.weight(1f),
-                )
-                Text("Change")
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 320.dp),
+        ) {
+            DropdownMenuItem(
+                text = { Text("No location") },
+                onClick = {
+                    onSelectedLocationIdChange(null)
+                    expanded = false
+                },
+            )
+            locations.forEach { location ->
                 DropdownMenuItem(
-                    text = { Text("No location") },
+                    text = { Text(location.name) },
                     onClick = {
-                        onSelectedLocationIdChange(null)
+                        onSelectedLocationIdChange(location.id)
                         expanded = false
                     },
                 )
-                locations.forEach { location ->
-                    DropdownMenuItem(
-                        text = { Text(location.name) },
-                        onClick = {
-                            onSelectedLocationIdChange(location.id)
-                            expanded = false
-                        },
-                    )
-                }
             }
-        }
-        if (locations.isEmpty()) {
-            Text(
-                text = "Save a scouting location first if you want to link one.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
