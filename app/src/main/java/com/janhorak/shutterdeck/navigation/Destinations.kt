@@ -80,7 +80,7 @@ fun titleForRoute(route: String?): String = when {
         Routes.PLANNER -> "Planner"
         Routes.GEAR -> "Gear"
         Routes.FILM -> "Film"
-        Routes.MORE -> "More"
+        Routes.MORE -> "Settings & Help"
         Routes.LIGHT_METER -> "Light Meter"
         Routes.EV_LUX -> "EV / Lux"
         Routes.COLOR_TEMPERATURE -> "Color Temperature"

@@ -4,17 +4,17 @@ Date: 2026-05-31
 Repo: `MrJanHorak/android-photography-assistant` · Working dir: `D:\androidprojects`
 Package root: `com.janhorak.shutterdeck`
 
-> **Read this first, then `ROADMAP.md` for the prioritized backlog.** This file is the
-> authoritative *current technical snapshot*. The vision is a "Swiss army knife" app for
-> photographers (exposure, planning, gear, film, business, on-shoot utilities) with an
-> intuitive UI and an eventual iOS port via Kotlin Multiplatform (KMP).
+> **Repo visitors should start with `README.md`. Contributors should read this next, then
+> `ROADMAP.md`.** This file is the authoritative *current technical snapshot*. The vision is a
+> "Swiss army knife" app for photographers (exposure, planning, gear, film, business,
+> on-shoot utilities) with an intuitive UI and an eventual iOS port via Kotlin Multiplatform (KMP).
 
 ---
 
 ## 1. Project Snapshot (what works today)
 
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
-**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
+**Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme + lightweight help).
 
 **25 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
@@ -93,6 +93,11 @@ covering ft ↔ m and °C ↔ °F on one screen with the same single-source-fiel
 by the newer reference tools. `calculators/domain/UnitConversion.kt` centralizes the exact
 distance/temperature math, and the temperature section adds an explicit +/- control so sub-zero
 entry does not depend on the keyboard exposing a minus key.
+
+**Light onboarding/documentation polish** landed too. The More tab now includes a small
+Settings & Help surface with a tab overview plus permission/immersive-tool/local-data notes, and
+the repo now has a root `README.md` for high-level orientation before diving into the denser
+technical docs.
 
 **Planner polish** has also started. Shoots can now optionally link to saved scouting locations:
 `ShootEntity` gained `locationId`, `ShootsScreen.kt` now supports editing shoots and choosing or

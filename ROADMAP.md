@@ -35,7 +35,9 @@ tests. The Exposure section now also includes **EV / Lux**: a quick ambient EV10
 foot-candle converter backed by the same ISO 100 illuminance math used by the light meter, plus
 **Color Temperature**: a Kelvin ↔ mired white-balance converter with common WB anchors for
 daylight, tungsten, shade, and similar references, and **Unit Converter**: a quick ft ↔ m and
-°C ↔ °F reference with a sign toggle for below-zero temperature entry.
+°C ↔ °F reference with a sign toggle for below-zero temperature entry. The **More** tab now also
+includes lightweight getting-started/help copy, and the repo root now has a `README.md` for
+high-level orientation before the more detailed contributor docs.
 The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
 **Intervalometer / time-lapse planner**, **Digital Slate**, **Composition Overlays**, and
 **Live Histogram & Zebra**, **Shot Notes**, and **Lighting Setup**: dedicated tools for on-shoot use. The intervalometer screen
