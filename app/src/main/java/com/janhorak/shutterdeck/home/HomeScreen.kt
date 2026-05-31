@@ -87,6 +87,12 @@ internal val toolSections = listOf(
     ),
 )
 
+internal fun toolEntriesByRoute(sections: List<ToolSection>): Map<String, ToolEntry> = sections
+    .asSequence()
+    .flatMap { section -> section.tools.asSequence() }
+    .mapNotNull { tool -> tool.route?.let { route -> route to tool } }
+    .toMap()
+
 internal fun filterToolSections(
     query: String,
     sections: List<ToolSection> = toolSections,
@@ -120,11 +126,27 @@ internal fun favoriteTools(
     .sortedBy { tool -> tool.title.lowercase() }
     .toList()
 
+internal fun recentTools(
+    sections: List<ToolSection>,
+    recentRoutes: List<String>,
+    excludedRoutes: Set<String> = emptySet(),
+): List<ToolEntry> {
+    val toolsByRoute = toolEntriesByRoute(sections)
+
+    return recentRoutes
+        .asSequence()
+        .filterNot { route -> route in excludedRoutes }
+        .mapNotNull { route -> toolsByRoute[route] }
+        .distinctBy { tool -> tool.route }
+        .toList()
+}
+
 /** Home hub: a grid of available tools. */
 @Composable
 fun HomeScreen(
     onToolClick: (String) -> Unit,
     favorites: Set<String>,
+    recents: List<String>,
     onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -133,6 +155,11 @@ fun HomeScreen(
     val favoriteEntries = favoriteTools(
         sections = filteredSections,
         favoriteRoutes = favorites,
+    )
+    val recentEntries = recentTools(
+        sections = filteredSections,
+        recentRoutes = recents,
+        excludedRoutes = favorites,
     )
 
     LazyVerticalGrid(
@@ -145,7 +172,7 @@ fun HomeScreen(
         item(span = { GridItemSpan(maxLineSpan) }) {
             SectionHeader(
                 title = "Tools",
-                subtitle = "Search the catalog or star your regulars to keep them pinned at the top.",
+                subtitle = "Search the catalog, star your regulars, or jump back into recent tools.",
             )
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -175,6 +202,30 @@ fun HomeScreen(
                     subtitle = tool.subtitle,
                     enabled = tool.enabled,
                     isFavorite = true,
+                    onToggleFavorite = route?.let { favoriteRoute ->
+                        { onToggleFavorite(favoriteRoute) }
+                    },
+                    onClick = { route?.let(onToolClick) },
+                )
+            }
+        }
+        if (recentEntries.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionHeader(
+                    title = "Recent",
+                    subtitle = "Jump back into the last tools you opened from here.",
+                )
+            }
+            items(
+                items = recentEntries,
+                key = { tool -> "recent:${tool.route}" },
+            ) { tool ->
+                val route = tool.route
+                ToolCard(
+                    title = tool.title,
+                    subtitle = tool.subtitle,
+                    enabled = tool.enabled,
+                    isFavorite = route != null && route in favorites,
                     onToggleFavorite = route?.let { favoriteRoute ->
                         { onToggleFavorite(favoriteRoute) }
                     },

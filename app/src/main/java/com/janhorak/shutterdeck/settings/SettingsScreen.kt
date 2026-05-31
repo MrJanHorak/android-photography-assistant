@@ -32,7 +32,7 @@ private data class HelpItem(
 private val tabOverviewItems = listOf(
     HelpItem(
         title = "Tools",
-        description = "Exposure references, planning math, and on-shoot utilities such as the light meter, digital slate, shot notes, and setup diagrammer. Search here and star your regular tools to pin them at the top.",
+        description = "Exposure references, planning math, and on-shoot utilities such as the light meter, digital slate, shot notes, and setup diagrammer. Search here, star your regular tools to pin them at the top, and use Recent to jump back into the tools you opened last.",
     ),
     HelpItem(
         title = "Planner",

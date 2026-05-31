@@ -22,7 +22,18 @@ class HomeViewModel @Inject constructor(
             initialValue = emptySet(),
         )
 
+    val recentRoutes: StateFlow<List<String>> = settingsRepository.recentRoutes
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
     fun toggleFavorite(route: String) {
         viewModelScope.launch { settingsRepository.toggleFavoriteRoute(route) }
+    }
+
+    fun recordRecent(route: String) {
+        viewModelScope.launch { settingsRepository.recordRecentRoute(route) }
     }
 }

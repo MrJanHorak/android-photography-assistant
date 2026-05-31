@@ -34,6 +34,9 @@ class SettingsRepository @Inject constructor(
     val favoriteRoutes: Flow<Set<String>> = preferencesFlow
         .map { preferences -> preferences[KEY_FAVORITE_ROUTES] ?: emptySet() }
 
+    val recentRoutes: Flow<List<String>> = preferencesFlow
+        .map { preferences -> decodeRecentRoutes(preferences[KEY_RECENT_ROUTES]) }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { preferences -> preferences[KEY_THEME_MODE] = mode.name }
     }
@@ -50,8 +53,49 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    suspend fun recordRecentRoute(route: String) {
+        require(route.isNotBlank()) { "Recent route must not be blank." }
+
+        dataStore.edit { preferences ->
+            val updatedRoutes = updatedRecentRoutes(
+                currentRoutes = decodeRecentRoutes(preferences[KEY_RECENT_ROUTES]),
+                openedRoute = route,
+            )
+            preferences[KEY_RECENT_ROUTES] = encodeRecentRoutes(updatedRoutes)
+        }
+    }
+
     private companion object {
         val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         val KEY_FAVORITE_ROUTES = stringSetPreferencesKey("favorite_routes")
+        val KEY_RECENT_ROUTES = stringPreferencesKey("recent_routes")
     }
+}
+
+internal const val MAX_RECENT_ROUTES = 6
+
+internal fun decodeRecentRoutes(serializedRoutes: String?): List<String> = serializedRoutes
+    ?.split('\n')
+    ?.map(String::trim)
+    ?.filter(String::isNotBlank)
+    ?: emptyList()
+
+internal fun encodeRecentRoutes(routes: List<String>): String = routes.joinToString(separator = "\n")
+
+internal fun updatedRecentRoutes(
+    currentRoutes: List<String>,
+    openedRoute: String,
+    maxSize: Int = MAX_RECENT_ROUTES,
+): List<String> {
+    require(openedRoute.isNotBlank()) { "Opened route must not be blank." }
+    require(maxSize > 0) { "Recent route cap must be positive." }
+
+    return buildList {
+        add(openedRoute)
+        addAll(
+            currentRoutes
+                .map(String::trim)
+                .filter { route -> route.isNotBlank() && route != openedRoute },
+        )
+    }.take(maxSize)
 }

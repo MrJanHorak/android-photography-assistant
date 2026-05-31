@@ -21,8 +21,9 @@ tools grouped into:
 - **On-Shoot Utilities** such as Spirit Level, Gray Card, Intervalometer, Dew Point, Digital Slate,
   Shot Notes, Lighting Setup, Composition Overlays, and Live Histogram & Zebra.
 
-The Tools screen also includes a lightweight search field plus persistent favorites, so you can
-filter the grid and star frequent tools to keep them pinned at the top.
+The Tools screen also includes a lightweight search field plus persistent favorites and recents, so
+you can filter the grid, star frequent tools to keep them pinned at the top, and jump back into the
+tools you opened most recently.
 
 ### Planner tab
 
@@ -45,7 +46,7 @@ push-pull helper, and reciprocity assistant.
 ### More tab
 
 The **More** tab currently includes theme settings plus lightweight in-app help covering the tab
-layout, tool favorites, permissions, immersive tools, and local-first behavior.
+layout, tool favorites/recents, permissions, immersive tools, and local-first behavior.
 
 ## Permissions and local data
 

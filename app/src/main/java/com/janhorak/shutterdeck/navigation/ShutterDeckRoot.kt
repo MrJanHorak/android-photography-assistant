@@ -137,9 +137,14 @@ fun ShutterDeckRoot() {
             composable(Routes.TOOLS) {
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val favoriteRoutes by homeViewModel.favoriteRoutes.collectAsStateWithLifecycle()
+                val recentRoutes by homeViewModel.recentRoutes.collectAsStateWithLifecycle()
                 HomeScreen(
-                    onToolClick = { route -> navController.navigate(route) },
+                    onToolClick = { route ->
+                        homeViewModel.recordRecent(route)
+                        navController.navigate(route)
+                    },
                     favorites = favoriteRoutes,
+                    recents = recentRoutes,
                     onToggleFavorite = homeViewModel::toggleFavorite,
                 )
             }

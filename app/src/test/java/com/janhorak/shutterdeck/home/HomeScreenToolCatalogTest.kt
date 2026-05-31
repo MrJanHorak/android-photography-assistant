@@ -33,4 +33,25 @@ class HomeScreenToolCatalogTest {
         assertEquals("Planning & Output", sections.single().title)
         assertTrue(sections.single().tools.size > 1)
     }
+
+    @Test
+    fun recentTools_preserveRecentOrder_andIgnoreUnknownRoutes() {
+        val recentEntries = recentTools(
+            sections = filterToolSections(query = ""),
+            recentRoutes = listOf(Routes.DIGITAL_SLATE, "missing", Routes.LIGHT_METER),
+        )
+
+        assertEquals(listOf("Digital Slate", "Light Meter"), recentEntries.map { it.title })
+    }
+
+    @Test
+    fun recentTools_excludeFavoritedRoutes_fromRecentSectionOnly() {
+        val recentEntries = recentTools(
+            sections = filterToolSections(query = ""),
+            recentRoutes = listOf(Routes.DIGITAL_SLATE, Routes.LIGHT_METER, Routes.DEW_POINT),
+            excludedRoutes = setOf(Routes.LIGHT_METER),
+        )
+
+        assertEquals(listOf("Digital Slate", "Dew Point"), recentEntries.map { it.title })
+    }
 }

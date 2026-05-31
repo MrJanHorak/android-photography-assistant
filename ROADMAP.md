@@ -39,7 +39,9 @@ daylight, tungsten, shade, and similar references, and **Unit Converter**: a qui
 includes lightweight getting-started/help copy, and the repo root now has a `README.md` for
 high-level orientation before the more detailed contributor docs. The **Tools** grid now also
 includes a lightweight search field that filters by section title, tool name, or description, plus
-persistent favorites that pin starred tools at the top for faster repeat access.
+persistent favorites that pin starred tools at the top for faster repeat access. A follow-up pass
+now also keeps a small recent-tool history so the Tools tab can surface a **Recent** section for
+quick repeat opens without requiring users to re-search every time.
 Planner create/edit flows now also use roomier bottom-sheet editors for saved shoots and scouting
 locations instead of the earlier `AlertDialog` forms.
 The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
@@ -68,7 +70,7 @@ shareable PNG diagram export path through Android's cache + `FileProvider`.
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v17) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **188 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **192 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
