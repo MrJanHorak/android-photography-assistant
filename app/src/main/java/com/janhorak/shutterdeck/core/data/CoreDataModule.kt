@@ -18,6 +18,7 @@ import com.janhorak.shutterdeck.core.data.db.GearMaintenanceDao
 import com.janhorak.shutterdeck.core.data.db.GearMemoryCardDao
 import com.janhorak.shutterdeck.core.data.db.LocationDao
 import com.janhorak.shutterdeck.core.data.db.ScenePresetDao
+import com.janhorak.shutterdeck.core.data.db.ShotNoteDao
 import com.janhorak.shutterdeck.core.data.db.ShootDao
 import dagger.Module
 import dagger.Provides
@@ -41,7 +42,7 @@ object CoreDataModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "shutterdeck.db")
-            .addMigrations(AppDatabase.MIGRATION_14_15)
+            .addMigrations(AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
@@ -80,4 +81,7 @@ object CoreDataModule {
 
     @Provides
     fun provideFilmRollDao(database: AppDatabase): FilmRollDao = database.filmRollDao()
+
+    @Provides
+    fun provideShotNoteDao(database: AppDatabase): ShotNoteDao = database.shotNoteDao()
 }

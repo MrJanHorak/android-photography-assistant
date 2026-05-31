@@ -23,8 +23,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         FilmStockEntity::class,
         FilmRollEntity::class,
         FilmFrameEntity::class,
+        ShotNoteEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,12 +41,31 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gearMaintenanceDao(): GearMaintenanceDao
     abstract fun filmStockDao(): FilmStockDao
     abstract fun filmRollDao(): FilmRollDao
+    abstract fun shotNoteDao(): ShotNoteDao
 
     companion object {
         val MIGRATION_14_15: Migration = object : Migration(14, 15) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "ALTER TABLE scout_locations ADD COLUMN referencePhotoUri TEXT NOT NULL DEFAULT ''",
+                )
+            }
+        }
+
+        val MIGRATION_15_16: Migration = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS shot_notes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        shotLabel TEXT NOT NULL,
+                        noteText TEXT NOT NULL,
+                        latitude REAL,
+                        longitude REAL,
+                        createdAtMillis INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
                 )
             }
         }

@@ -54,6 +54,7 @@ import com.janhorak.shutterdeck.utilities.presentation.DigitalSlateScreen
 import com.janhorak.shutterdeck.utilities.presentation.GrayCardScreen
 import com.janhorak.shutterdeck.utilities.presentation.HistogramZebraScreen
 import com.janhorak.shutterdeck.utilities.presentation.IntervalometerPlannerScreen
+import com.janhorak.shutterdeck.utilities.presentation.ShotNotesScreen
 import com.janhorak.shutterdeck.utilities.presentation.SpiritLevelScreen
 
 /** Root composable: app bar + bottom navigation hosting the navigation graph. */
@@ -136,6 +137,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.DIGITAL_SLATE) {
                 DigitalSlateScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.SHOT_NOTES) {
+                ShotNotesScreen()
             }
             composable(Routes.DEPTH_OF_FIELD) {
                 DepthOfFieldScreen()
