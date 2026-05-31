@@ -16,18 +16,19 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**24 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**25 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. EV / Lux — ambient EV100, lux, and foot-candle reference converter.
 3. Color Temperature — Kelvin ↔ mired white-balance reference.
-4. Depth of Field · 5. ND Filter · 6. Field of View · 7. Astro Shutter (500/NPF) ·
-8. Print Size · 9. Focus Stacking · 10. Sunny 16 / reciprocity · 11. Guide Number (flash) ·
-12. Equivalent Exposure · 13. Macro / Extension · 14. Diffraction Limit ·
-15. Golden Hour (sun times) · 16. Sun & Moon position + moon phase ·
-17. Spirit Level / horizon · 18. Intervalometer / time-lapse planner ·
-19. Digital Slate / clapperboard · 20. Shot Notes / quick field notes ·
-21. Lighting Setup / diagrammer · 22. Gray Card / white-balance reference ·
-23. Composition Overlays / framing guides · 24. Live Histogram & Zebra.
+4. Unit Converter — ft ↔ m and °C ↔ °F quick reference.
+5. Depth of Field · 6. ND Filter · 7. Field of View · 8. Astro Shutter (500/NPF) ·
+9. Print Size · 10. Focus Stacking · 11. Sunny 16 / reciprocity · 12. Guide Number (flash) ·
+13. Equivalent Exposure · 14. Macro / Extension · 15. Diffraction Limit ·
+16. Golden Hour (sun times) · 17. Sun & Moon position + moon phase ·
+18. Spirit Level / horizon · 19. Intervalometer / time-lapse planner ·
+20. Digital Slate / clapperboard · 21. Shot Notes / quick field notes ·
+22. Lighting Setup / diagrammer · 23. Gray Card / white-balance reference ·
+24. Composition Overlays / framing guides · 25. Live Histogram & Zebra.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -86,6 +87,12 @@ includes **Color Temperature**, a Kelvin ↔ mired white-balance converter with 
 daylight, tungsten, shade, and similar references. `calculators/domain/ColorTemperature.kt`
 centralizes the reciprocal color-temperature math and keeps the feature scoped to pure unit
 conversion instead of overlapping with the separate future gel calculator.
+
+**General field-unit follow-through** landed too. The Tools grid now includes **Unit Converter**,
+covering ft ↔ m and °C ↔ °F on one screen with the same single-source-field converter pattern used
+by the newer reference tools. `calculators/domain/UnitConversion.kt` centralizes the exact
+distance/temperature math, and the temperature section adds an explicit +/- control so sub-zero
+entry does not depend on the keyboard exposing a minus key.
 
 **Planner polish** has also started. Shoots can now optionally link to saved scouting locations:
 `ShootEntity` gained `locationId`, `ShootsScreen.kt` now supports editing shoots and choosing or
@@ -341,7 +348,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 174 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 179 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -414,8 +421,7 @@ The user commits the code themselves — **do not git commit** unless asked.
    incremental Tools-grid addition.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
-ft/m & °C/°F unit converter; cheat-sheet library (fireworks, milky way, waterfalls);
-battery/card-capacity estimator;
+cheat-sheet library (fireworks, milky way, waterfalls); battery/card-capacity estimator;
 dew-point lens-fog warning; gel/CTO-CTB calculator. Each is a ~1 domain file + 1 test +
 1 screen following §5.
 

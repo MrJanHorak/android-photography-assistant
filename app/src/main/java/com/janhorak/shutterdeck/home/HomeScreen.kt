@@ -36,6 +36,7 @@ private val toolSections = listOf(
             ToolEntry("Light Meter", "Ambient & reflective metering", Routes.LIGHT_METER),
             ToolEntry("EV / Lux", "Ambient EV100, lux & foot-candles", Routes.EV_LUX),
             ToolEntry("Color Temperature", "Kelvin ↔ mired white-balance reference", Routes.COLOR_TEMPERATURE),
+            ToolEntry("Unit Converter", "ft ↔ m and °C ↔ °F quick reference", Routes.UNIT_CONVERTER),
             ToolEntry("ND Filter", "Long-exposure calculator", Routes.ND_FILTER),
             ToolEntry("Sunny 16", "Daylight exposure & reciprocity", Routes.SUNNY_16),
             ToolEntry("Equivalent Exposure", "Trade aperture, shutter & ISO", Routes.EQUIVALENT_EXPOSURE),

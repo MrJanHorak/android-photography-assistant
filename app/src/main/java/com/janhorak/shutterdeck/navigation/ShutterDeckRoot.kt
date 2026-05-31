@@ -36,6 +36,7 @@ import com.janhorak.shutterdeck.calculators.presentation.PrintSizeScreen
 import com.janhorak.shutterdeck.calculators.presentation.Sunny16Screen
 import com.janhorak.shutterdeck.calculators.presentation.SunMoonPositionScreen
 import com.janhorak.shutterdeck.calculators.presentation.SunTimesScreen
+import com.janhorak.shutterdeck.calculators.presentation.UnitConverterScreen
 import com.janhorak.shutterdeck.film.presentation.FilmDevelopmentScreen
 import com.janhorak.shutterdeck.film.presentation.FilmPushPullScreen
 import com.janhorak.shutterdeck.film.presentation.FilmReciprocityScreen
@@ -140,6 +141,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.COLOR_TEMPERATURE) {
                 ColorTemperatureScreen()
+            }
+            composable(Routes.UNIT_CONVERTER) {
+                UnitConverterScreen()
             }
             composable(Routes.INTERVALOMETER) {
                 IntervalometerPlannerScreen()

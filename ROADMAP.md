@@ -34,7 +34,8 @@ suggested-shutter formatting, and AE summary formatting to pure metering domain 
 tests. The Exposure section now also includes **EV / Lux**: a quick ambient EV100, lux, and
 foot-candle converter backed by the same ISO 100 illuminance math used by the light meter, plus
 **Color Temperature**: a Kelvin ↔ mired white-balance converter with common WB anchors for
-daylight, tungsten, shade, and similar references.
+daylight, tungsten, shade, and similar references, and **Unit Converter**: a quick ft ↔ m and
+°C ↔ °F reference with a sign toggle for below-zero temperature entry.
 The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
 **Intervalometer / time-lapse planner**, **Digital Slate**, **Composition Overlays**, and
 **Live Histogram & Zebra**, **Shot Notes**, and **Lighting Setup**: dedicated tools for on-shoot use. The intervalometer screen
@@ -60,7 +61,7 @@ shareable PNG diagram export path through Android's cache + `FileProvider`.
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v17) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **174 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **179 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
@@ -403,7 +404,6 @@ Quick reference grab-bag to pull future tasks from:
 - Focus-test/resolution chart generator (print or display).
 - Metronome/agitation timer for film dev; safelight timer for darkroom.
 - Backup reminder & "did you format the card?" pre-shoot checklist.
-- Unit converter (ft/m, °C/°F) used across calculators.
 - Watermark/EXIF stamp tool for exported reference shots.
 - Shareable shoot report (gear + frames + map) export to PDF.
 
