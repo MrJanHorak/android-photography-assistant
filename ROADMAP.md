@@ -11,7 +11,7 @@ later phases depend on the Phase 0 foundation.
 
 ---
 
-## 1. Current State (updated 2026-05-30)
+## 1. Current State (updated 2026-05-31)
 
 > Historical note: this section originally described a single-screen light-meter app on the
 > `com.example.photography_helper` package. That foundation work (Phase 0) is **done** — the
@@ -21,7 +21,8 @@ later phases depend on the Phase 0 foundation.
 **Status:** Phase 0 (foundation) ✅, Phase 1 meter polish ✅, Phase 2 (all 11 calculators C1–C11) ✅,
 Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅,
 Phase 4 Gear G1–G7 ✅, Phase 5 **FL1–FL5 film suite** ✅, and Phase 7 **U1 Spirit level** +
-**U3 Gray-card / white-balance screen** + **U4 Live histogram & zebra** + **U5 Composition overlays** ✅.
+**U2 Intervalometer / time-lapse planner** + **U3 Gray-card / white-balance screen** +
+**U4 Live histogram & zebra** + **U5 Composition overlays** ✅.
 The **Tools** grid is now sectioned for scanability, the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
 battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export,
@@ -30,12 +31,15 @@ push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now com
 `LightMeterScreen.kt` delegates shooting-aid state, workflow coaching, nearest-option matching,
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
 tests. The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
-**Composition Overlays**, and **Live Histogram & Zebra**: dedicated full-screen tools with hidden
-app chrome, keep-awake behavior, and sensor/reference/camera-preview UIs for on-shoot use. The
-shared CameraX preview path now supports both overlay-only preview and a throttled luminance
-analysis pass, so the app can draw rule-of-thirds / golden-ratio / corner-to-corner diagonal
-guides or show a live luminance histogram plus coarse clipped-highlight zebra cells over the same
-preview foundation. Structured date/time entry is now picker-backed across the confirmed
+**Intervalometer / time-lapse planner**, **Composition Overlays**, and **Live Histogram & Zebra**:
+dedicated tools for on-shoot use. The intervalometer screen intentionally starts as a planner: it
+calculates first-frame-to-last-frame capture windows, clip length, storage/card coverage, battery
+coverage, and exposure-vs-interval headroom from pure `utilities/domain/IntervalometerPlanner.kt`
+helpers covered by JVM tests. The shared CameraX preview path now supports both overlay-only
+preview and a throttled luminance analysis pass, so the app can draw rule-of-thirds / golden-ratio
+/ corner-to-corner diagonal guides or show a live luminance histogram plus coarse
+clipped-highlight zebra cells over the same preview foundation. Structured date/time entry is now
+picker-backed across the confirmed
 hard-formatted surfaces too: planner shoot dates, gear purchase/maintenance/loan/support dates,
 film roll/frame timestamps, and the astronomy date/time inputs now share reusable picker
 components plus shared ISO/date-time formatting helpers, while freeform notes such as scouting
@@ -44,13 +48,13 @@ components plus shared ISO/date-time formatting helpers, while freeform notes su
 - **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v15) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **151 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **158 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
 1. **Phase 7 shared-camera follow-through is complete.** The next clean utility slice is
-   **[U2] intervalometer / time-lapse planner**, followed by the remaining on-shoot backlog.
+   **[U6] digital slate / clapperboard**, followed by the remaining on-shoot backlog.
 2. **Phase 6/7 utility backlog** is still open: business and on-shoot helpers remain the next
    broad expansion area now that planner, gear, film, calculator, and shared camera foundations are
    stable.
@@ -321,8 +325,12 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   *Update:* the Tools grid now links to a dedicated full-screen Spirit Level route with a large
   bubble dial, pitch/roll readouts, portrait lock for safer leveling math, gravity-sensor primary
   input with accelerometer fallback, and keep-awake behavior while the level is open.
-- **[U2] Intervalometer / time-lapse planner.** Interval, count, clip-length, card/
-  battery estimate. (Triggering the camera needs hardware support; start as planner.)
+- **[U2] Intervalometer / time-lapse planner. ✅** Interval, count, clip-length, card/
+  battery estimate. *Update:* the Tools grid now links to a dedicated planner route that computes
+  the first-frame-to-last-frame capture window, clip length at the chosen playback fps,
+  storage/card coverage, battery coverage, and exposure-vs-interval headroom from pure
+  `utilities/domain/IntervalometerPlanner.kt` helpers with JVM tests. Camera triggering still
+  remains out of scope until future hardware-backed support exists.
 - **[U3] Gray-card / white-balance screen. ✅** Full-screen 18% gray and white/black
   reference; calibration target. *Update:* the Tools grid now links to a dedicated full-screen
   route that hides app chrome, keeps the display awake, forces max screen brightness while open,
@@ -384,8 +392,8 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 7 / U2** — intervalometer / time-lapse planner as the next smaller on-shoot
-   utility slice.
+5. **NEXT → Phase 7 / U6** — digital slate / clapperboard as the next smaller on-shoot utility
+   slice.
 6. **Phase 6/7** — business + remaining on-shoot utilities as the app matures.
 7. **Phase 8** — formalize the KMP `shared` module once feature breadth stabilizes.
 8. **Phase 8** — iOS once the Kotlin domain layer is stable and well-tested.

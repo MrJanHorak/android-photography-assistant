@@ -1,6 +1,6 @@
 # ShutterDeck — Handoff Snapshot
 
-Date: 2026-05-30
+Date: 2026-05-31
 Repo: `MrJanHorak/android-photography-assistant` · Working dir: `D:\androidprojects`
 Package root: `com.janhorak.shutterdeck`
 
@@ -16,14 +16,15 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**18 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**19 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
 10. Equivalent Exposure · 11. Macro / Extension · 12. Diffraction Limit ·
 13. Golden Hour (sun times) · 14. Sun & Moon position + moon phase ·
-15. Spirit Level / horizon · 16. Gray Card / white-balance reference ·
-17. Composition Overlays / framing guides · 18. Live Histogram & Zebra.
+15. Spirit Level / horizon · 16. Intervalometer / time-lapse planner ·
+17. Gray Card / white-balance reference · 18. Composition Overlays / framing guides ·
+19. Live Histogram & Zebra.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -129,6 +130,13 @@ in the same `UseCaseGroup` as preview so the viewport stays aligned. `utilities/
 copies the cropped Y plane while respecting `cropRect` + `rowStride`, throttles updates to roughly
 10 fps, and feeds pure `utilities/domain/HistogramZebraAnalysis.kt` helpers that build the live
 histogram bins and coarse zebra-cell activation data covered by JVM tests.
+
+That same utility section now also includes **Intervalometer / Time-Lapse Planner**.
+`utilities/presentation/IntervalometerPlannerScreen.kt` adds a dedicated planning route that
+calculates the first-frame-to-last-frame capture window, clip length at the chosen playback fps,
+storage/card coverage, battery coverage, and exposure-vs-interval headroom from pure
+`utilities/domain/IntervalometerPlanner.kt` helpers covered by JVM tests. It intentionally stops at
+planning math for now; camera triggering still belongs to future hardware-backed work.
 
 Structured date/time entry now also uses shared picker-backed controls wherever the app expects a
 real formatted date or time. `planner/presentation/ShootsScreen.kt`, the Gear purchase /
@@ -352,12 +360,12 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 7 / U2:** intervalometer / time-lapse planner is the next clean on-shoot utility slice
-   now that the shared CameraX-preview follow-through is complete.
+1. **Phase 7 / U6:** digital slate / clapperboard is now the next smaller on-shoot utility slice
+   after the intervalometer/time-lapse planner landed.
 2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
-3. **Phase 6/7 backlog** — business and remaining on-shoot utilities remain the next broad feature
-   area now that planner polish and the shared camera utilities are in a good place.
+3. **Phase 6/7 backlog** — business and the remaining on-shoot utilities remain the next broad
+   feature area now that planner polish and the shared camera utilities are in a good place.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
 EV↔lux↔foot-candle converter; Kelvin/mired WB converter; ft/m & °C/°F unit converter;

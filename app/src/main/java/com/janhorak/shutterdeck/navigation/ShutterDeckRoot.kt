@@ -52,6 +52,7 @@ import com.janhorak.shutterdeck.settings.SettingsScreen
 import com.janhorak.shutterdeck.utilities.presentation.CompositionOverlayScreen
 import com.janhorak.shutterdeck.utilities.presentation.GrayCardScreen
 import com.janhorak.shutterdeck.utilities.presentation.HistogramZebraScreen
+import com.janhorak.shutterdeck.utilities.presentation.IntervalometerPlannerScreen
 import com.janhorak.shutterdeck.utilities.presentation.SpiritLevelScreen
 
 /** Root composable: app bar + bottom navigation hosting the navigation graph. */
@@ -127,6 +128,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.LIGHT_METER) {
                 LightMeterScreen()
+            }
+            composable(Routes.INTERVALOMETER) {
+                IntervalometerPlannerScreen()
             }
             composable(Routes.DEPTH_OF_FIELD) {
                 DepthOfFieldScreen()

@@ -65,6 +65,7 @@ private val toolSections = listOf(
         title = "On-Shoot Utilities",
         subtitle = "Quick field references that benefit from a live screen or sensors.",
         tools = listOf(
+            ToolEntry("Intervalometer", "Time-lapse duration, clip, card & battery planning", Routes.INTERVALOMETER),
             ToolEntry("Spirit Level", "Pitch / roll bubble level", Routes.SPIRIT_LEVEL),
             ToolEntry("Gray Card", "Full-screen gray / white / black reference", Routes.GRAY_CARD),
             ToolEntry("Composition Overlays", "Rule-of-thirds, golden ratio & diagonals", Routes.COMPOSITION_OVERLAYS),
