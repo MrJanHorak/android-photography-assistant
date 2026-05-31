@@ -54,6 +54,7 @@ import com.janhorak.shutterdeck.utilities.presentation.DigitalSlateScreen
 import com.janhorak.shutterdeck.utilities.presentation.GrayCardScreen
 import com.janhorak.shutterdeck.utilities.presentation.HistogramZebraScreen
 import com.janhorak.shutterdeck.utilities.presentation.IntervalometerPlannerScreen
+import com.janhorak.shutterdeck.utilities.presentation.LightingSetupDiagramScreen
 import com.janhorak.shutterdeck.utilities.presentation.ShotNotesScreen
 import com.janhorak.shutterdeck.utilities.presentation.SpiritLevelScreen
 
@@ -140,6 +141,9 @@ fun ShutterDeckRoot() {
             }
             composable(Routes.SHOT_NOTES) {
                 ShotNotesScreen()
+            }
+            composable(Routes.LIGHTING_SETUP) {
+                LightingSetupDiagramScreen()
             }
             composable(Routes.DEPTH_OF_FIELD) {
                 DepthOfFieldScreen()

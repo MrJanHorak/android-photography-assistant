@@ -23,7 +23,7 @@ Phase 3 P1–P4 (golden hour, sun/moon, scouting locations, shoot planner) ✅,
 Phase 4 Gear G1–G7 ✅, Phase 5 **FL1–FL5 film suite** ✅, and Phase 7 **U1 Spirit level** +
 **U2 Intervalometer / time-lapse planner** + **U3 Gray-card / white-balance screen** +
 **U4 Live histogram & zebra** + **U5 Composition overlays** + **U6 Digital slate / clapperboard** +
-**U7 Voice / quick notes per shot** ✅.
+**U7 Voice / quick notes per shot** + **U8 Lighting-setup diagrammer** ✅.
 The **Tools** grid is now sectioned for scanability, the **Gear** tab has Room-backed
 inventory, catalog seeding, richer metadata/reference-photo attachments, filter/thread tracking,
 battery/card tracking, loan/rental tracking, packing kits, maintenance logs, and insurance export,
@@ -33,7 +33,7 @@ push/pull helper, and reciprocity assistant. **Phase 1 meter polish** is now com
 suggested-shutter formatting, and AE summary formatting to pure metering domain helpers with JVM
 tests. The new **On-Shoot Utilities** section now adds **Spirit Level**, **Gray Card**, and
 **Intervalometer / time-lapse planner**, **Digital Slate**, **Composition Overlays**, and
-**Live Histogram & Zebra**, and **Shot Notes**: dedicated tools for on-shoot use. The intervalometer screen
+**Live Histogram & Zebra**, **Shot Notes**, and **Lighting Setup**: dedicated tools for on-shoot use. The intervalometer screen
 intentionally starts as a planner: it calculates first-frame-to-last-frame capture windows, clip
 length, storage/card coverage, battery coverage, and exposure-vs-interval headroom from pure
 `utilities/domain/IntervalometerPlanner.kt` helpers covered by JVM tests. The digital slate route
@@ -47,18 +47,21 @@ hard-formatted surfaces too: planner shoot dates, gear purchase/maintenance/loan
 film roll/frame timestamps, and the astronomy date/time inputs now share reusable picker
 components plus shared ISO/date-time formatting helpers, while freeform notes such as scouting
 "Best time" stay text. Shot Notes adds local Room-backed quick field notes with typed or dictated
-entry, automatic timestamps, and optional current-location snapshots for on-shoot logging.
+entry, automatic timestamps, and optional current-location snapshots for on-shoot logging, while
+Lighting Setup adds a draggable top-down stage diagrammer with saved Room-backed setups and a
+shareable PNG diagram export path through Android's cache + `FileProvider`.
 
-- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v16) + DataStore,
+- **Stack:** Jetpack Compose, MVVM, Hilt DI, Navigation Compose, Room (v17) + DataStore,
   core-library desugaring for `java.time`, CameraX, Play Services location, KSP. AGP 9.2.1,
   Kotlin 2.2.10, Compose BOM 2026.02.01, minSdk 24, targetSdk 36.
-- **Validated:** `assembleDebug` green; **161 JVM unit tests, 0 failures**.
+- **Validated:** `assembleDebug` green; **164 JVM unit tests, 0 failures**.
 - **Discipline in place:** all calculator/astronomy math is in Android-free `*/domain/`
   packages with one unit test each — ready for a Phase 8 KMP `shared` module.
 
 ### Remaining gaps / next focus
-1. **Phase 7 shared-camera follow-through is complete.** The next clean utility slice is
-   **[U8] lighting-setup diagrammer**, followed by the remaining on-shoot backlog.
+1. **The named Phase 7 utility backlog in this roadmap is complete.** The next focus now returns to
+   the remaining broader Phase 6/7 backlog: either a new on-shoot helper from the idea list or the
+   first Phase 6 business/pro workflow slice.
 2. **Phase 6/7 utility backlog** is still open: business and on-shoot helpers remain the next
    broad expansion area now that planner, gear, film, calculator, and shared camera foundations are
    stable.
@@ -357,7 +360,10 @@ All are pure-domain + simple UI. Great first tools to prove the F1–F5 foundati
   *Update:* the Tools grid now links to a local-only Room-backed note screen with quick typed entry,
   optional `RecognizerIntent` dictation, automatic timestamps, optional current-location snapshots,
   and edit/delete flows for saved notes.
-- **[U8] Lighting-setup diagrammer.** Place lights/subject/camera; save/share diagrams.
+- **[U8] Lighting-setup diagrammer. ✅** Place lights/subject/camera; save/share diagrams.
+  *Update:* the Tools grid now links to a draggable top-down diagram editor with default
+  camera/subject/key-fill-back markers, add/remove light support, Room-backed save/load/update/delete
+  flows, and shareable PNG diagrams exported through a `FileProvider` with a generated text summary.
 
 ### Phase 8 — iOS port (P3; after tool set stabilizes)
 
@@ -402,7 +408,7 @@ Quick reference grab-bag to pull future tasks from:
 2. ~~**Phase 2 calculators (C1–C11)** — fast wins.~~ ✅ DONE
 3. ~~**Phase 3 planner (P1–P4)** — golden hour, sun/moon, locations, shoots.~~ ✅ DONE
 4. ~~**Phase 4 Gear**: richer metadata, then loan/rental + insurance/export support.~~ ✅ DONE
-5. **NEXT → Phase 7 / U8** — lighting-setup diagrammer as the next smaller on-shoot utility
+5. **NEXT → Phase 6/7 backlog** — pick the next smaller remaining business or on-shoot helper
    slice.
 6. **Phase 6/7** — business + remaining on-shoot utilities as the app matures.
 7. **Phase 8** — formalize the KMP `shared` module once feature breadth stabilizes.

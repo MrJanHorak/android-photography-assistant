@@ -68,6 +68,7 @@ private val toolSections = listOf(
             ToolEntry("Intervalometer", "Time-lapse duration, clip, card & battery planning", Routes.INTERVALOMETER),
             ToolEntry("Digital Slate", "Scene / shot / take board with a sync flash mark", Routes.DIGITAL_SLATE),
             ToolEntry("Shot Notes", "Voice/text notes with timestamps and current location", Routes.SHOT_NOTES),
+            ToolEntry("Lighting Setup", "Drag camera, subject and lights into a reusable diagram", Routes.LIGHTING_SETUP),
             ToolEntry("Spirit Level", "Pitch / roll bubble level", Routes.SPIRIT_LEVEL),
             ToolEntry("Gray Card", "Full-screen gray / white / black reference", Routes.GRAY_CARD),
             ToolEntry("Composition Overlays", "Rule-of-thirds, golden ratio & diagonals", Routes.COMPOSITION_OVERLAYS),

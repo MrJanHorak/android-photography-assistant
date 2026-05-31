@@ -16,7 +16,7 @@ Package root: `com.janhorak.shutterdeck`
 ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tabs:
 **Tools** (sectioned home grid), **Planner** (hub), **Gear** (inventory + filters + power/media + loans + insurance/export + kits + maintenance), **Film** (hub + stock library + roll logger + development timer + push/pull helper + reciprocity assistant), **More** (settings/theme).
 
-**21 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
+**22 calculator/reference tools** remain reachable from the Tools grid, grouped into **Exposure** / **Lens & Focus** / **Planning & Output** / **On-Shoot Utilities**:
 1. Light Meter — ambient (lux sensor) + reflective (CameraX) metering, gear-aware coaching.
 2. Depth of Field · 3. ND Filter · 4. Field of View · 5. Astro Shutter (500/NPF) ·
 6. Print Size · 7. Focus Stacking · 8. Sunny 16 / reciprocity · 9. Guide Number (flash) ·
@@ -24,8 +24,8 @@ ShutterDeck is a multi-tool Jetpack Compose app. Bottom navigation now has 5 tab
 13. Golden Hour (sun times) · 14. Sun & Moon position + moon phase ·
 15. Spirit Level / horizon · 16. Intervalometer / time-lapse planner ·
 17. Digital Slate / clapperboard · 18. Shot Notes / quick field notes ·
-19. Gray Card / white-balance reference · 20. Composition Overlays / framing guides ·
-21. Live Histogram & Zebra.
+19. Lighting Setup / diagrammer · 20. Gray Card / white-balance reference ·
+21. Composition Overlays / framing guides · 22. Live Histogram & Zebra.
 
 **Planner tab** is a hub linking: Golden Hour, Sun & Moon, **Scouting Locations** (Room CRUD),
 and **Shoots** (Room-backed shoot list → per-shoot shot checklist).
@@ -151,6 +151,12 @@ That same utility section now also includes **Shot Notes**. `ShotNotesScreen.kt`
 dictation through `RecognizerIntent`, automatic timestamps, and optional current-location snapshots
 that reuse the shared location permission/status UI already used elsewhere in the app.
 
+That same utility section now also includes **Lighting Setup**. `LightingSetupDiagramScreen.kt`
+and `LightingSetupDiagramViewModel.kt` add a local-first top-down diagrammer with draggable
+camera/subject/light markers, saved Room-backed setups, reusable load/update/delete flows, and a
+share action that renders a clean PNG diagram into cache and exposes it through a new
+`FileProvider`, with the generated text summary included as share text.
+
 Structured date/time entry now also uses shared picker-backed controls wherever the app expects a
 real formatted date or time. `planner/presentation/ShootsScreen.kt`, the Gear purchase /
 maintenance / loan / battery / card editors, `FilmRollsScreen.kt`, `FilmRollDetailScreen.kt`,
@@ -189,11 +195,12 @@ new picks are normalized to ISO `YYYY-MM-DD`, `HH:mm`, or `YYYY-MM-DD HH:mm` as 
 Reference photos currently surface as attachment labels with replace/clear actions rather than
 full in-app previews.
 
-**Persistence:** Room DB `shutterdeck.db` (v16) + DataStore (Preferences) for theme/settings.
+**Persistence:** Room DB `shutterdeck.db` (v17) + DataStore (Preferences) for theme/settings.
 `AppDatabase.MIGRATION_14_15` preserves the location `referencePhotoUri` column and
-`AppDatabase.MIGRATION_15_16` adds the new `shot_notes` table on upgrade, but this build still
-keeps `fallbackToDestructiveMigration(dropAllTables = true)` for older schema jumps, so much older
-local installs can still lose Room data on upgrade.
+`AppDatabase.MIGRATION_15_16` adds the `shot_notes` table, while
+`AppDatabase.MIGRATION_16_17` adds `lighting_setups` plus `lighting_setup_items` on upgrade, but
+this build still keeps `fallbackToDestructiveMigration(dropAllTables = true)` for older schema
+jumps, so much older local installs can still lose Room data on upgrade.
 
 ---
 
@@ -222,15 +229,18 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `ImageAnalysis` support for metering and camera utilities), `CameraPermissionUtil`
   (shared camera-permission check).
 - `utilities/domain/` — `GrayCardReference`, `SpiritLevelMath`, `CompositionOverlayGuides`,
-  `HistogramZebraAnalysis`, `IntervalometerPlanner`, `ShotNotes` (gamma-correct reference presets,
-  pure tilt math, normalized overlay-guide geometry, intervalometer planning math, shot-note
-  transcript/timestamp helpers, and pure histogram/zebra luminance analysis).
+  `HistogramZebraAnalysis`, `IntervalometerPlanner`, `ShotNotes`, `LightingSetupDiagram`
+  (gamma-correct reference presets, pure tilt math, normalized overlay-guide geometry,
+  intervalometer planning math, shot-note transcript/timestamp helpers, lighting-setup draft/share
+  helpers, and pure histogram/zebra luminance analysis).
 - `utilities/data/` — `SpiritLevelSensorRepository` (gravity-sensor primary, accelerometer
   fallback), `LiveLuminanceAnalyzer` (cropped Y-plane analysis bridge for the live histogram/zebra
   tool).
 - `utilities/presentation/` — `GrayCardScreen`, `SpiritLevelScreen`, `SpiritLevelViewModel`,
   `IntervalometerPlannerScreen`, `DigitalSlateScreen`, `ShotNotesScreen`, `ShotNotesViewModel`,
-  `CompositionOverlayScreen`, `HistogramZebraScreen` (full-screen On-Shoot Utilities).
+  `LightingSetupDiagramScreen`, `LightingSetupDiagramViewModel`,
+  `LightingSetupShareRenderer`, `CompositionOverlayScreen`, `HistogramZebraScreen`
+  (full-screen On-Shoot Utilities).
 - `core/time/` — `StructuredDateTime` (shared ISO date / time / timestamp parse-format helpers for
   picker-backed inputs across Gear, Film, Planner, and astronomy tools).
 - `ui/components/` — `PickerFields` (shared Compose date/time/date-time picker buttons + dialogs,
@@ -278,7 +288,8 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
   `FilmStockEntity` / `FilmStockDao`,
   `FilmRollEntity` / `FilmFrameEntity` / `FilmRollDao`,
   `GearKitEntity` / `GearKitItemEntity` / `GearKitDao`,
-  `ShotNoteEntity` / `ShotNoteDao`, and
+  `ShotNoteEntity` / `ShotNoteDao`,
+  `LightingSetupEntity` / `LightingSetupItemEntity` / `LightingSetupDao`, and
   `GearMaintenanceEntryEntity` / `GearMaintenanceDao`).
 - `ui/components/` — `ToolCard`, `ResultRow`, `SectionHeader`, `LabeledField`,
   `PlaceholderScreen`. `ui/location/` — reusable current-location permission/action UI.
@@ -314,7 +325,7 @@ MVVM + Hilt DI + Navigation Compose + Room + DataStore + CameraX.
 $x=(Select-Xml -Path "app\build\test-results\testDebugUnitTest\*.xml" -XPath "//testsuite").Node
 "Total: $(($x|Measure-Object tests -Sum).Sum), fail $(($x|Measure-Object failures -Sum).Sum), err $(($x|Measure-Object errors -Sum).Sum)"
 ```
-**Current status: `assembleDebug` succeeds; 161 unit tests, 0 failures.** CI at
+**Current status: `assembleDebug` succeeds; 164 unit tests, 0 failures.** CI at
 `.github/workflows/android-ci.yml` (JDK 21, runs tests + assembleDebug + uploads APK).
 The user commits the code themselves — **do not git commit** unless asked.
 
@@ -377,12 +388,14 @@ The user commits the code themselves — **do not git commit** unless asked.
 ---
 
 ## 8. Best next steps (prioritized — see ROADMAP §3 for full detail)
-1. **Phase 7 / U8:** lighting-setup diagrammer is now the next smaller on-shoot utility slice after
-   shot notes landed.
-2. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
+1. **Phase 6/7 backlog selection:** the named Phase 7 utility slices in `ROADMAP.md` are now
+   complete, so the next contributor should pick the next smaller remaining business or on-shoot
+   helper from the broader Phase 6/7 backlog.
+2. **Digital slate polish:** the current `Mark` overlay is still a fast 260 ms flash; if more
+   field testing says that is too brief, add a configurable hold duration around the existing mark
+   behavior rather than changing the slate board itself.
+3. **Phase 8 KMP discipline follow-through** — keep new domain helpers Android-free and continue
    shrinking presentation-only feature files when you touch them.
-3. **Phase 6/7 backlog** — business and the remaining on-shoot utilities remain the next broad
-   feature area now that planner polish and the shared camera utilities are in a good place.
 
 ### Easy grab-bag (no tool too small — ROADMAP §4)
 EV↔lux↔foot-candle converter; Kelvin/mired WB converter; ft/m & °C/°F unit converter;
