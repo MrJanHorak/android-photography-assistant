@@ -57,6 +57,7 @@ import com.janhorak.shutterdeck.ui.effects.LockLandscapeOrientation
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Locale
+import kotlin.math.ceil
 import kotlinx.coroutines.delay
 
 private const val SLATE_FLASH_DURATION_MILLIS = 260L
@@ -424,13 +425,15 @@ private fun SlateBoard(
 @Composable
 private fun SlateStripeBar(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
+        if (size.width <= 0f || size.height <= 0f) return@Canvas
+
         drawRect(color = Color(0xFF050505))
 
-        val stripeWidth = size.height * 0.9f
-        var startX = -size.height
-        var brightStripe = true
+        val stripeWidth = (size.height * 0.9f).coerceAtLeast(1f)
+        val stripeCount = ceil((size.width + (size.height * 2f)) / stripeWidth).toInt()
 
-        while (startX < size.width + size.height) {
+        repeat(stripeCount) { index ->
+            val startX = -size.height + (index * stripeWidth)
             val path = Path().apply {
                 moveTo(startX, size.height)
                 lineTo(startX + stripeWidth, size.height)
@@ -440,10 +443,8 @@ private fun SlateStripeBar(modifier: Modifier = Modifier) {
             }
             drawPath(
                 path = path,
-                color = if (brightStripe) Color(0xFFF5F5F5) else Color(0xFFFFC857),
+                color = if (index % 2 == 0) Color(0xFFF5F5F5) else Color(0xFFFFC857),
             )
-            startX += stripeWidth
-            brightStripe = !brightStripe
         }
     }
 }
